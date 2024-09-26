@@ -26,8 +26,8 @@ const Private = () => {
 
     const getPrivateSpace = async () => {
         try {
-            const resp = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/get/private/space/66f3c531ce2e126d7f90dc11`);
-            setPrivateSpace(resp.data.privateSpace);
+            // const resp = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/get/private/space/66f3c531ce2e126d7f90dc11`);
+            // setPrivateSpace(resp.data.privateSpace);
         } catch (error) {
             console.log(error);
         }

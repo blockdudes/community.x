@@ -21,10 +21,13 @@ export const fetchPublicPost = async (userId: string, space: string, channel: st
         let posts: Post[] = [];
 
         if (space === "public") {
+            console.log("fetch public")
             posts = postsFind.filter(post => post.space === "public");
         } else {
             if (channel !== null && privateSpaceId !== null) {
-                posts = postsFind.filter(post => post.space === "private" && post.private.channel === channel && post.private.privateSpaceId === privateSpaceId);
+                // console.log("fetch private", postsFind)
+                posts = postsFind.filter(post => post.space === "private" && post.private.channel === channel && post.private.privateSpaceId == privateSpaceId);
+                console.log("eiuweiuriuewhfiuw", posts);
             }
         }
 

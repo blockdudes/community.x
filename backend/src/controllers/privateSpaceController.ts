@@ -31,6 +31,9 @@ export const createPrivateSpace = async (req: Request, res: Response, next: Next
                 { type: "general", posts: [] },
                 { type: "governance", posts: [] },
                 { type: "announcement", posts: [] }
+            ],
+            members: [
+                privateSpaceCreateBody.createdBy,
             ]
         });
         return res.status(201).json({ message: "private space created successfully.", privateSpace: privateSpaceCreate })
@@ -86,7 +89,9 @@ export const joinPrivateSpace = async (req: Request, res: Response, next: NextFu
 export const getPrivateSpace = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const privateSpaceId = req.params.privateSpaceId;
-        const privateSpaceFind = await privateSpaceModel.findById({ _id: privateSpaceId });
+        const privateSpaceFind = await privateSpaceModel.findById({ _id: privateSpaceId })
+            .populate('createdBy', 'username description image address')
+            .populate('members', 'username description image address');
 
         if (!privateSpaceFind) {
             error.message = "private space not available";
@@ -97,5 +102,21 @@ export const getPrivateSpace = async (req: Request, res: Response, next: NextFun
         return res.status(200).json({ privateSpace: privateSpaceFind });
     } catch (error) {
         next(error)
+    }
+}
+
+export const getPrivateSpaceAll = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const privateSpacesFind = await privateSpaceModel.find()
+            .populate('createdBy', 'username description image address')
+            .populate('members', 'username description image address');
+        if (!privateSpacesFind) {
+            error.message = "private spaces not available";
+            (error as any).statusCode = 400;
+            return next(error);
+        }
+        return res.status(200).json({ privateSpaces: privateSpacesFind });
+    } catch (error) {
+        next(error);
     }
 }

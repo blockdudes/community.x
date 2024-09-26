@@ -2,8 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import io, { Socket } from "socket.io-client";
 import { useRouter } from "next/navigation";
-import axios, { all } from "axios";
-
+import axios from "axios";
 
 type Post = {
   post: string;
@@ -18,30 +17,22 @@ type Post = {
   type: "created" | "repost";
 }
 
-export default function Home() {
+export default function Public() {
 
   const [titleInput, setTitleInput] = useState("");
   const [descriptionInput, setDescriptionInput] = useState("");
   const [fileInput, setFileInput] = useState<File | null>(null);
-
   const socketRef = useRef<Socket | null>(null);
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
   const [posts, setPosts] = useState<Post[]>([]);
   const [users, setUsers] = useState([]);
-
   const [comment, setComment] = useState("");
 
   useEffect(() => {
     checkAuthStatus();
     if (!socketRef.current) {
       socketRef.current = io(process.env.NEXT_PUBLIC_BACKEND_API_URL as string);
-
-      socketRef.current.on("fetch_post", (post: string) => {
-        console.log("post data: ", post);
-      })
-
       return () => {
         if (socketRef.current) {
           socketRef.current.disconnect();
@@ -55,42 +46,30 @@ export default function Home() {
     if (isAuthenticated && socketRef.current) {
       socketRef.current.emit("join_space", { space: "public" });
       socketRef.current.on("fetch_post", (post) => {
-        // setPosts(post);
-        console.log("post data: ", post);
         const publicPost = [];
         const followingPost = [];
-
-
         for (const p of post?.publicPost) {
           if (p.timestamp) {
             publicPost.push(p);
           }
         }
-
         publicPost.sort((a, b) => b.timestamp - a.timestamp);
-
 
         for (const p of post?.followingPost) {
           if (p.timestamp) {
             followingPost.push(p);
           }
         }
-
         followingPost.sort((a, b) => b.timestamp - a.timestamp);
-
-        console.log(publicPost, followingPost);
-
-
         const allPost = [...publicPost.slice(0, 60), ...followingPost.slice(0, 40)]
         allPost.sort((a, b) => b.timestamp - a.timestamp);
-
         setPosts(allPost)
-      })
+      });
       socketRef.current.on("public_user", (data: any) => {
         console.log("public user data", data);
         console.log(data);
         setUsers(data?.users);
-      })
+      });
       fetchPost();
       fetchAllUser();
     }
@@ -98,35 +77,29 @@ export default function Home() {
 
   const fetchPost = async () => {
     try {
-      const post = (await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/post/get/all/66f292a6714b25e3f78b1d3d`)).data;
-
+      const fetchPostData = {
+        space: "public",
+        privateSpaceId: null,
+        channel: null
+      }
+      const post = (await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/post/get/all/66f292a6714b25e3f78b1d3d`, { params: fetchPostData })).data;
       const publicPost = [];
       const followingPost = [];
-
-
       for (const p of post?.publicPost) {
         if (p.timestamp) {
           publicPost.push(p);
         }
       }
-
       publicPost.sort((a, b) => b.timestamp - a.timestamp);
-
 
       for (const p of post?.followingPost) {
         if (p.timestamp) {
           followingPost.push(p);
         }
       }
-
       followingPost.sort((a, b) => b.timestamp - a.timestamp);
-
-      console.log(publicPost, followingPost);
-
-
       const allPost = [...publicPost.slice(0, 60), ...followingPost.slice(0, 40)]
       allPost.sort((a, b) => b.timestamp - a.timestamp);
-
       setPosts(allPost)
     } catch (error) {
       console.log(error);
@@ -179,8 +152,6 @@ export default function Home() {
             privateSpaceId: null,
             channel: null
           };
-
-          console.log(postData);
           socketRef.current.emit("create_post", postData);
           setTitleInput("");
           setDescriptionInput("");
@@ -211,7 +182,10 @@ export default function Home() {
         const data = {
           _id: _id,
           commentBy: address,
-          comment: comment
+          comment: comment,
+          space: "public",
+          privateSpaceId: null,
+          channel: null
         }
         socketRef.current.emit("post_comment", data);
       }
@@ -323,13 +297,19 @@ export default function Home() {
             const newFile = base64ToFile(post.content, post.fileName, post.type);
             const data = {
               _id: (item as any)._id,
-              likedBy: "66f292b2714b25e3f78b1d40"
+              likedBy: "66f292b2714b25e3f78b1d40",
+              space: "public",
+              privateSpaceId: null,
+              channel: null
             }
 
             const repostData = {
               _id: (item as any)._id,
               repostBy: "66f292b2714b25e3f78b1d40",
-              repostDescription: "This is DEFI REPOST"
+              repostDescription: "This is DEFI REPOST",
+              space: "public",
+              privateSpaceId: null,
+              channel: null
             }
             return (
               <div key={index}>

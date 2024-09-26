@@ -10,8 +10,8 @@ export interface UserRegisterBody {
 export interface PostCreateBody {
     title: string;
     description: string;
-    createdBy: Types.ObjectId;
     post: string;
+    createdBy: Types.ObjectId;
     space: string;
     privateSpaceId: Types.ObjectId | null;
     channel: "general" | "governance" | "announcement" | null;

@@ -14,7 +14,7 @@ export const getAllPost = async (req: Request, res: Response, next: NextFunction
     }
 }
 
-type requestBodyType = {
+type RequestQueryType = {
     space: "public" | "private",
     privateSpaceId: mongoose.Types.ObjectId | null;
     channel: "general" | "governance" | "announcement" | null;
@@ -23,13 +23,17 @@ type requestBodyType = {
 export const getAllPosts = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.params.id;
-        const requestBody: requestBodyType = req.body;
+        const requestQuery = req.query as unknown as RequestQueryType;
+        console.log(requestQuery)
+
         let post = {};
 
-        if (requestBody.space === "public") {
-            post = await fetchPublicPost(userId, requestBody.space, null, null);
+        if (requestQuery.space === "public") {
+            console.log("public");
+            post = await fetchPublicPost(userId, requestQuery.space, null, null);
         } else {
-            post = await fetchPublicPost(userId, requestBody.space, requestBody.channel, requestBody.privateSpaceId);
+            console.log("4tirutoirutoierutoprivate");
+            post = await fetchPublicPost(userId, requestQuery.space, requestQuery.channel, requestQuery.privateSpaceId);
         }
         return res.status(200).json({ message: "GOOD", publicPost: (post as any).publicPost, followingPost: (post as any).followingPost });
     } catch (error) {

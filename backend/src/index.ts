@@ -47,12 +47,12 @@ io.on("connection", (socket: Socket) => {
 
     socket.on("join_space", (data) => {
         console.log(data);
-        console.log(`User ${socket.id} joined ${data.space} space`);
-
         if (data.space === "public") {
             socket.join("public");
+            console.log(`User ${socket.id} joined ${data.space} space`);
         } else {
             socket.join(`${data.privateSpaceId}_${data.channel}`);
+            console.log(`User ${socket.id} joined ${data.privateSpaceId}_${data.channel} space`);
         }
     });
 
@@ -73,13 +73,17 @@ io.on("connection", (socket: Socket) => {
                 }
             });
 
+            console.log(createPost);
+
             if (createPost) {
                 let getAllPost = {};
 
                 if (data.space === "public") {
+                    console.log("public");
                     getAllPost = await fetchPublicPost(data.createdBy.toString(), data.space, null, null);
                     io.to("public").emit("fetch_post", getAllPost);
                 } else {
+                    console.log("private");
                     getAllPost = await fetchPublicPost(data.createdBy.toString(), data.space, data.channel, data.privateSpaceId);
                     io.to(`${data.privateSpaceId}_${data.channel}`).emit("fetch_post", getAllPost);
                 }
@@ -101,9 +105,11 @@ io.on("connection", (socket: Socket) => {
                 let getAllPost = {};
 
                 if (data.space === "public") {
+                    console.log("public")
                     getAllPost = await fetchPublicPost(data.likedBy.toString(), data.space, null, null);
                     io.to("public").emit("fetch_post", getAllPost);
                 } else {
+                    console.log("private")
                     getAllPost = await fetchPublicPost(data.likedBy.toString(), data.space, data.channel, data.privateSpaceId);
                     io.to(`${data.privateSpaceId}_${data.channel}`).emit("fetch_post", getAllPost);
                 }
@@ -125,9 +131,11 @@ io.on("connection", (socket: Socket) => {
                 let getAllPost = {};
 
                 if (data.space === "public") {
+                    console.log("public")
                     getAllPost = await fetchPublicPost(data.commentBy.toString(), data.space, null, null);
                     io.to("public").emit("fetch_post", getAllPost);
                 } else {
+                    console.log("private")
                     getAllPost = await fetchPublicPost(data.commentBy.toString(), data.space, data.channel, data.privateSpaceId);
                     io.to(`${data.privateSpaceId}_${data.channel}`).emit("fetch_post", getAllPost);
                 }
@@ -151,7 +159,12 @@ io.on("connection", (socket: Socket) => {
                     timestamp: timestamp,
                     repostBy: data.repostBy,
                     repostDescription: data.repostDescription,
-                    type: "repost"
+                    type: "repost",
+                    space: data.space === "public" ? "public" : "private",
+                    private: data.space === "public" ? {} : {
+                        privateSpaceId: data.privateSpaceId,
+                        channel: data.channel
+                    }
                 });
 
                 if (createRepost) {
