@@ -4,6 +4,9 @@ import io, { Socket } from "socket.io-client";
 import axios from "axios";
 import { useRouter, useParams } from "next/navigation";
 
+import { fetchAllPost } from "@/lib/features/FetchAllPostSlice";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+
 type Post = {
     post: string;
     title: string;
@@ -25,12 +28,14 @@ export default function General() {
     const socketRef = useRef<Socket | null>(null);
     const router = useRouter();
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [posts, setPosts] = useState<Post[]>([]);
     const [users, setUsers] = useState([]);
     const [comment, setComment] = useState("");
 
     const params = useParams();
     const [member, setMember] = useState();
+    const dispatch = useAppDispatch();
+    const posts = useAppSelector(state => state.fetchAllPost.posts);
+    const [account, setAccount] = useState<string>("0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6");
 
     useEffect(() => {
         checkAuthStatus();
@@ -49,85 +54,29 @@ export default function General() {
         if (isAuthenticated && socketRef.current) {
             socketRef.current.emit("join_space", { space: "private", privateSpaceId: params.privateId, channel: "general" });
             socketRef.current.on("fetch_post", (post) => {
-                const publicPost = [];
-                const followingPost = [];
-                for (const p of post?.publicPost) {
-                    if (p.timestamp) {
-                        publicPost.push(p);
-                    }
-                }
-                publicPost.sort((a, b) => b.timestamp - a.timestamp);
-
-                for (const p of post?.followingPost) {
-                    if (p.timestamp) {
-                        followingPost.push(p);
-                    }
-                }
-                followingPost.sort((a, b) => b.timestamp - a.timestamp);
-                const allPost = [...publicPost.slice(0, 60), ...followingPost.slice(0, 40)]
-                allPost.sort((a, b) => b.timestamp - a.timestamp);
-                setPosts(allPost)
+                dispatch(fetchAllPost(post));
             });
             socketRef.current.on("public_user", (data: any) => {
-                console.log("public user data", data);
-                console.log(data);
                 setUsers(data?.users);
             });
-            fetchPost();
+            dispatch(fetchAllPost({ space: "private", privateSpaceId: params.privateId, channel: "general", userId: (member as any)._id }));
             fetchAllUser();
         }
     }, [isAuthenticated])
 
-    const fetchPost = async () => {
-        try {
-            const fetchPostData = {
-                space: "private",
-                privateSpaceId: params.privateId,
-                channel: "general"
-            }
-            const post = (await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/post/get/all/${(member as any)._id}`, { params: fetchPostData })).data;
-            // console.log("kjwebfkjewbkjewbfkjewbfkjwbefkjbew", post);
-            const publicPost = [];
-            const followingPost = [];
-            for (const p of post?.publicPost) {
-                if (p.timestamp) {
-                    publicPost.push(p);
-                }
-            }
-            publicPost.sort((a, b) => b.timestamp - a.timestamp);
-
-            for (const p of post?.followingPost) {
-                if (p.timestamp) {
-                    followingPost.push(p);
-                }
-            }
-            followingPost.sort((a, b) => b.timestamp - a.timestamp);
-            const allPost = [...publicPost.slice(0, 60), ...followingPost.slice(0, 40)]
-            allPost.sort((a, b) => b.timestamp - a.timestamp);
-            setPosts(allPost)
-        } catch (error) {
-            console.log(error);
-        }
-    }
-
     const fetchAllUser = async () => {
         try {
-            const res = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/getAllUsers`);
+            const res = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/all/users`);
             setUsers(res.data?.users);
         } catch (error) {
             console.log(error);
         }
     }
 
-
-
-    console.log(users);
-    console.log(posts);
-
     const checkAuthStatus = async () => {
         try {
             const resp = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/get/private/space/${params.privateId}`);
-            const member = resp.data?.privateSpace?.members.find((member: any) => member.address === "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6");
+            const member = resp.data?.privateSpace?.members.find((member: any) => member.address === account);
             if (member) {
                 setIsAuthenticated(true);
                 setMember(member);
@@ -138,8 +87,6 @@ export default function General() {
             console.error("Error fetching user:", error);
         }
     }
-
-    console.log(member);
 
     const handleCreatePost = async () => {
         try {
@@ -213,7 +160,6 @@ export default function General() {
     }
 
     const handleFollow = async (data: any) => {
-        console.log("follow_user")
         try {
             if (isAuthenticated && socketRef.current) {
                 socketRef.current.emit("follow_user", data);
@@ -224,7 +170,6 @@ export default function General() {
     }
 
     const handleUnFollow = async (data: any) => {
-        console.log("unfollow_user")
         try {
             if (isAuthenticated && socketRef.current) {
                 socketRef.current.emit("unfollow_user", data);
@@ -273,9 +218,9 @@ export default function General() {
             {/* <div className="py-5">
                 {
                     users
-                        .filter((item: any) => item.address !== "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6")
+                        .filter((item: any) => item.address !== account)
                         .map((item: any, index) => {
-                            const isFollowing = item.followers.some((follower: any) => follower.address === "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6");
+                            const isFollowing = item.followers.some((follower: any) => follower.address === account);
 
                             const data = {
                                 userId: "66f292a6714b25e3f78b1d3d",
@@ -300,7 +245,7 @@ export default function General() {
 
             <div>
                 {
-                    posts.map((item, index) => {
+                    posts?.map((item, index) => {
                         const post = JSON.parse((item as any).post);
                         const newFile = base64ToFile(post.content, post.fileName, post.type);
                         const data = {
@@ -374,62 +319,3 @@ export default function General() {
         </div>
     );
 }
-
-// "use client";
-// import { useRef, useEffect, useState } from 'react'
-// import io, { Socket } from "socket.io-client";
-// import axios from 'axios';
-// import { useRouter, useParams } from "next/navigation";
-
-// const General = () => {
-//     const router = useRouter();
-//     const params = useParams();
-//     const socketRef = useRef<Socket | null>(null);
-//     const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-//     console.log(params.privateId);
-
-//     useEffect(() => {
-//         checkAuthStatus();
-//         if (!socketRef.current) {
-//             socketRef.current = io(process.env.NEXT_PUBLIC_BACKEND_API_URL as string);
-//             return () => {
-//                 if (socketRef.current) {
-//                     socketRef.current.disconnect();
-//                     socketRef.current = null;
-//                 }
-//             };
-//         }
-
-//     }, []);
-
-//     useEffect(() => {
-//         if (isAuthenticated && socketRef.current) {
-//             socketRef.current.emit("join_space", { space: "private", privateSpaceId: params.privateId, channel: "general" });
-//         }
-//     }, [isAuthenticated])
-
-
-// const checkAuthStatus = async () => {
-//     try {
-//         const resp = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/get/private/space/${params.privateId}`);
-//         const member = resp.data?.privateSpace?.members.find((member: any) => member.address === "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6");
-//         if (member) {
-//             setIsAuthenticated(true);
-//         } else {
-//             console.log("You are not the member");
-//         }
-//     } catch (error) {
-//         console.error("Error fetching user:", error);
-//     }
-// }
-
-
-//     return (
-//         <div>
-//             General
-//         </div>
-//     )
-// }
-
-// export default General

@@ -12,6 +12,7 @@ export interface Channels extends Document {
 
 export interface PrivateSpace extends Document {
     name: string;
+    image: string;
     createdBy: Types.ObjectId;
     entryCondition: Condition;
     interactCondition: Condition;
@@ -21,6 +22,7 @@ export interface PrivateSpace extends Document {
 
 export type privateSpaceCreateBodyType = {
     name: string;
+    image: string;
     createdBy: Types.ObjectId;
     entryCondition: Condition;
     interactCondition: Condition;

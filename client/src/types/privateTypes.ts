@@ -8,8 +8,9 @@ type Channels = {
     posts: Object[]
 }
 
-type privateSpaceType = {
+export type privateSpaceType = {
     name: string;
+    image: string;
     createdBy: Object,
     entryCondition: Condition,
     interactCondition: Condition,

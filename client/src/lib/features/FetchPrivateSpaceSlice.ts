@@ -1,6 +1,6 @@
 "use client"
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { intialPrivateSpaceType } from "@/types/privateTypes";
+import { intialPrivateSpaceType, privateSpaceType } from "@/types/privateTypes";
 import axios from "axios";
 
 const intialPrivateSpace: intialPrivateSpaceType = {
@@ -24,19 +24,15 @@ const fetchPublicSpaceSlice = createSlice({
     name: "Fetch Public Space",
     initialState: intialPrivateSpace,
     extraReducers: builder => {
-        builder.addCase(fetchPrivateSpace.pending, (state) => {
-            state.loading = true;
-        })
-        builder.addCase(fetchPrivateSpace.fulfilled, (state, action) => {
-            state.loading = false;
-            state.privateSpace = action.payload?.privateSpaces ?? null;
-            state.error = null;
-        })
-        builder.addCase(fetchPrivateSpace.rejected, (state, action) => {
-            state.loading = false;
-            state.privateSpace = null;
-            state.error = action.payload as string;;
-        })
+        const updateState = (state: intialPrivateSpaceType, privateSpace: privateSpaceType[] | null, error: string | null, loading: boolean) => {
+            state.privateSpace = privateSpace;
+            state.error = error;
+            state.loading = loading;
+        }
+        builder
+            .addCase(fetchPrivateSpace.pending, (state) => updateState(state, null, null, true))
+            .addCase(fetchPrivateSpace.fulfilled, (state, action) => updateState(state, action.payload?.privateSpaces ?? null, null, false))
+            .addCase(fetchPrivateSpace.rejected, (state, action) => updateState(state, null, action.payload as string, false))
     },
     reducers: {}
 })

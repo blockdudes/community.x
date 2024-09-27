@@ -1,11 +1,17 @@
-import { configureStore } from '@reduxjs/toolkit'
-import FetchPrivateSpaceReducer from './features/FetchPrivateSpaceSlice'
-
+import { configureStore } from '@reduxjs/toolkit';
+import FetchPrivateSpaceReducer from './features/FetchPrivateSpaceSlice';
+import FetchAllPostReducer from './features/FetchAllPostSlice';
+import FetchAllUsersReducer from './features/FetchAllUsersSlice';
 export const makeStore = () => {
     return configureStore({
         reducer: {
-            fetchPrivateSpace: FetchPrivateSpaceReducer
+            fetchPrivateSpace: FetchPrivateSpaceReducer,
+            fetchAllPost: FetchAllPostReducer,
+            fetchAllUser: FetchAllUsersReducer,
         },
+        middleware: (getDefaultMiddleware) => getDefaultMiddleware({
+            serializableCheck: false,
+        }),
     })
 }
 

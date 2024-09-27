@@ -9,7 +9,7 @@ export const createPrivateSpace = async (req: Request, res: Response, next: Next
     try {
         const privateSpaceCreateBody: privateSpaceCreateBodyType = req.body;
 
-        if (!privateSpaceCreateBody.name || !privateSpaceCreateBody.createdBy || !privateSpaceCreateBody.entryCondition.address || !privateSpaceCreateBody.entryCondition.maxAmount || !privateSpaceCreateBody.interactCondition.address || !privateSpaceCreateBody.interactCondition.maxAmount) {
+        if (!privateSpaceCreateBody.name || !privateSpaceCreateBody.image || !privateSpaceCreateBody.createdBy || !privateSpaceCreateBody.entryCondition.address || !privateSpaceCreateBody.entryCondition.maxAmount || !privateSpaceCreateBody.interactCondition.address || !privateSpaceCreateBody.interactCondition.maxAmount) {
             error.message = "Missing required fields";
             (error as any).statusCode = 400;
             return next(error);
@@ -24,6 +24,7 @@ export const createPrivateSpace = async (req: Request, res: Response, next: Next
 
         const privateSpaceCreate = await privateSpaceModel.create({
             name: privateSpaceCreateBody.name,
+            image: privateSpaceCreateBody.image,
             createdBy: privateSpaceCreateBody.createdBy,
             entryCondition: privateSpaceCreateBody.entryCondition,
             interactCondition: privateSpaceCreateBody.interactCondition,
@@ -77,7 +78,7 @@ export const joinPrivateSpace = async (req: Request, res: Response, next: NextFu
             return next(error);
         }
 
-        return res.status(201).json({
+        return res.status(200).json({
             message: "user added successfully.",
             privateSpace: privateSpaceMemberUpdate
         });

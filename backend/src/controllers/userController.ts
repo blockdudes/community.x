@@ -7,9 +7,9 @@ const error = new Error();
 export const userRegister = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const body = req.body as UserRegisterBody;
-        const { username, description, image, address } = body;
+        const { name, username, description, image, address } = body;
 
-        if (!username || !description || !image || !address) {
+        if (!name || !username || !description || !image || !address) {
             error.message = "Missing required fields";
             (error as any).statusCode = 400;
             return next(error);
@@ -22,7 +22,7 @@ export const userRegister = async (req: Request, res: Response, next: NextFuncti
             return next(error);
         }
 
-        const registerUser = await userModel.create({ username, description, image, address });
+        const registerUser = await userModel.create({ name, username, description, image, address });
         return res.status(201).json({ message: "User created successfully", user: registerUser });
     } catch (error) {
         next(error);

@@ -4,6 +4,7 @@ import "./globals.css";
 
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
+import RightSider from "@/components/RightSider";
 import StoreProvider from "@/lib/storeProvider";
 
 const geistSans = localFont({
@@ -29,14 +30,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <StoreProvider>
           <Header />
           <div className="flex">
             <Sidebar />
             {children}
+            <RightSider />
           </div>
         </StoreProvider>
       </body>

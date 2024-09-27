@@ -135,7 +135,7 @@ export default function Public() {
 
     const fetchAllUser = async () => {
         try {
-            const res = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/getAllUsers`);
+            const res = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/all/users`);
             setUsers(res.data?.users);
         } catch (error) {
             console.log(error);

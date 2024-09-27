@@ -31,6 +31,10 @@ const privateSpaceSchema: Schema<PrivateSpace> = new Schema({
         required: true,
         unique: true
     },
+    image: {
+        type: String,
+        required: true
+    },
     createdBy: {
         type: Schema.Types.ObjectId,
         ref: 'User',

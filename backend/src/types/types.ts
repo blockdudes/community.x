@@ -1,6 +1,7 @@
 import { Document, Types } from "mongoose";
 
 export interface UserRegisterBody {
+    name: string;
     username: string;
     description: string;
     image: string;

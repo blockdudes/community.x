@@ -4,32 +4,28 @@ import io, { Socket } from "socket.io-client";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
-type Post = {
-  post: string;
-  title: string;
-  description: string;
-  createdBy: string;
-  repostBy: string;
-  repostDescription: string;
-  timestamp: number;
-  likes: string[];
-  comments: Comment[];
-  type: "created" | "repost";
-}
+import { fetchAllPost } from "@/lib/features/FetchAllPostSlice";
+import { fetchAllUsers } from "@/lib/features/FetchAllUsersSlice";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 
 export default function Public() {
-
   const [titleInput, setTitleInput] = useState("");
   const [descriptionInput, setDescriptionInput] = useState("");
   const [fileInput, setFileInput] = useState<File | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [posts, setPosts] = useState<Post[]>([]);
   const [users, setUsers] = useState([]);
   const [comment, setComment] = useState("");
 
+  const dispatch = useAppDispatch();
+  const posts = useAppSelector(state => state.fetchAllPost.posts);
+  const [account, setAccount] = useState("0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6")
+  const userProfile = (useAppSelector(state => state.fetchAllUser.users)).find(user => user.address === account);
+  console.log(userProfile);
+
   useEffect(() => {
+    dispatch(fetchAllUsers())
     checkAuthStatus();
     if (!socketRef.current) {
       socketRef.current = io(process.env.NEXT_PUBLIC_BACKEND_API_URL as string);
@@ -43,86 +39,31 @@ export default function Public() {
   }, [])
 
   useEffect(() => {
-    if (isAuthenticated && socketRef.current) {
+    if (isAuthenticated && socketRef.current && userProfile) {
       socketRef.current.emit("join_space", { space: "public" });
       socketRef.current.on("fetch_post", (post) => {
-        const publicPost = [];
-        const followingPost = [];
-        for (const p of post?.publicPost) {
-          if (p.timestamp) {
-            publicPost.push(p);
-          }
-        }
-        publicPost.sort((a, b) => b.timestamp - a.timestamp);
-
-        for (const p of post?.followingPost) {
-          if (p.timestamp) {
-            followingPost.push(p);
-          }
-        }
-        followingPost.sort((a, b) => b.timestamp - a.timestamp);
-        const allPost = [...publicPost.slice(0, 60), ...followingPost.slice(0, 40)]
-        allPost.sort((a, b) => b.timestamp - a.timestamp);
-        setPosts(allPost)
+        dispatch(fetchAllPost(post));
       });
       socketRef.current.on("public_user", (data: any) => {
-        console.log("public user data", data);
-        console.log(data);
         setUsers(data?.users);
       });
-      fetchPost();
+      dispatch(fetchAllPost({ space: "public", privateSpaceId: null, channel: null, userId: (userProfile as any)?._id }));
       fetchAllUser();
     }
-  }, [isAuthenticated])
-
-  const fetchPost = async () => {
-    try {
-      const fetchPostData = {
-        space: "public",
-        privateSpaceId: null,
-        channel: null
-      }
-      const post = (await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/post/get/all/66f292a6714b25e3f78b1d3d`, { params: fetchPostData })).data;
-      const publicPost = [];
-      const followingPost = [];
-      for (const p of post?.publicPost) {
-        if (p.timestamp) {
-          publicPost.push(p);
-        }
-      }
-      publicPost.sort((a, b) => b.timestamp - a.timestamp);
-
-      for (const p of post?.followingPost) {
-        if (p.timestamp) {
-          followingPost.push(p);
-        }
-      }
-      followingPost.sort((a, b) => b.timestamp - a.timestamp);
-      const allPost = [...publicPost.slice(0, 60), ...followingPost.slice(0, 40)]
-      allPost.sort((a, b) => b.timestamp - a.timestamp);
-      setPosts(allPost)
-    } catch (error) {
-      console.log(error);
-    }
-  }
+  }, [isAuthenticated, userProfile])
 
   const fetchAllUser = async () => {
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/getAllUsers`);
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/all/users`);
       setUsers(res.data?.users);
     } catch (error) {
       console.log(error);
     }
   }
 
-
-
-  console.log(users);
-  console.log(posts);
-
   const checkAuthStatus = async () => {
     try {
-      const isAuth = (await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6`))?.data?.isAuth;
+      const isAuth = (await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/${account}`))?.data?.isAuth;
       if (!isAuth) {
         router.push('/register');
       } else {
@@ -147,7 +88,7 @@ export default function Public() {
             title: titleInput ? titleInput : "",
             description: descriptionInput ? descriptionInput : "",
             post: post,
-            createdBy: "66f292a6714b25e3f78b1d3d",
+            createdBy: (userProfile as any)?._id,
             space: "public",
             privateSpaceId: null,
             channel: null
@@ -156,12 +97,32 @@ export default function Public() {
           setTitleInput("");
           setDescriptionInput("");
           setFileInput(null);
+          // window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
           console.error("No content to post");
         }
       }
     } catch (error) {
       console.error("Error creating post:", error);
+    }
+  }
+
+  const registerUser = async () => {
+    try {
+      const userData = {
+        name: "somyaranjan",
+        username: "somyaranjankhatua.9",
+        description: "this is description",
+        image: "https://plus.unsplash.com/premium_photo-1664474619075-644dd191935f?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8aW1hZ2V8ZW58MHx8MHx8fDA%3D",
+        address: account
+      }
+
+      const resp = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/register`, userData);
+      if (resp.status === 201) {
+        dispatch(fetchAllUsers());
+      }
+    } catch (error) {
+      console.log(error);
     }
   }
 
@@ -205,7 +166,6 @@ export default function Public() {
   }
 
   const handleFollow = async (data: any) => {
-    console.log("follow_user")
     try {
       if (isAuthenticated && socketRef.current) {
         socketRef.current.emit("follow_user", data);
@@ -216,7 +176,6 @@ export default function Public() {
   }
 
   const handleUnFollow = async (data: any) => {
-    console.log("unfollow_user")
     try {
       if (isAuthenticated && socketRef.current) {
         socketRef.current.emit("unfollow_user", data);
@@ -236,21 +195,13 @@ export default function Public() {
   }
 
   const base64ToFile = (base64String: string, fileName: string, fileType: string): File => {
-    // Extract the base64 data (remove the data URL prefix if present)
     const base64Data = base64String.split(',')[1] || base64String;
-
-    // Convert base64 to binary
     const binaryString = atob(base64Data);
     const byteArray = new Uint8Array(binaryString.length);
-
     for (let i = 0; i < binaryString.length; i++) {
       byteArray[i] = binaryString.charCodeAt(i);
     }
-
-    // Create a Blob from the binary data
     const blob = new Blob([byteArray], { type: fileType });
-
-    // Create and return a new File object
     return new File([blob], fileName, { type: fileType });
   };
 
@@ -265,12 +216,12 @@ export default function Public() {
       <div className="py-5">
         {
           users
-            .filter((item: any) => item.address !== "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6")
+            .filter((item: any) => item.address !== account)
             .map((item: any, index) => {
-              const isFollowing = item.followers.some((follower: any) => follower.address === "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6");
+              const isFollowing = item.followers.some((follower: any) => follower.address === account);
 
               const data = {
-                userId: "66f292a6714b25e3f78b1d3d",
+                userId: (userProfile as any)?._id,
                 followUserId: item._id
               }
               return (
@@ -292,12 +243,12 @@ export default function Public() {
 
       <div>
         {
-          posts.map((item, index) => {
+          posts?.map((item, index) => {
             const post = JSON.parse((item as any).post);
             const newFile = base64ToFile(post.content, post.fileName, post.type);
             const data = {
               _id: (item as any)._id,
-              likedBy: "66f292b2714b25e3f78b1d40",
+              likedBy: (userProfile as any)?._id,
               space: "public",
               privateSpaceId: null,
               channel: null
@@ -305,7 +256,7 @@ export default function Public() {
 
             const repostData = {
               _id: (item as any)._id,
-              repostBy: "66f292b2714b25e3f78b1d40",
+              repostBy: (userProfile as any)?._id,
               repostDescription: "This is DEFI REPOST",
               space: "public",
               privateSpaceId: null,
@@ -318,7 +269,7 @@ export default function Public() {
                   <button type="button" onClick={() => handleLikePost(data)}>Like</button>
                   <div>
                     <input type="text" value={comment} onChange={(e) => setComment(e.target.value)} />
-                    <button type="button" onClick={() => handleCommentPost((item as any)._id, "66f292a6714b25e3f78b1d3d")}>comment</button>
+                    <button type="button" onClick={() => handleCommentPost((item as any)._id, (userProfile as any)?._id)}>comment</button>
                   </div>
                   <button type="button" onClick={() => handleRePost(repostData)}>Repost</button>
                 </div>

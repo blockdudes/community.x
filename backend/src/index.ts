@@ -96,7 +96,7 @@ io.on("connection", (socket: Socket) => {
     socket.on("post_like", async (data: LikePostBody) => {
         try {
             const updatedPost = await postModel.findOneAndUpdate(
-                { _id: data._id },
+                { _id: data._id, likes: { $ne: data.likedBy } },
                 { $addToSet: { likes: data.likedBy } },
                 { new: true }
             );
@@ -219,7 +219,7 @@ io.on("connection", (socket: Socket) => {
                         path: 'followings',
                         select: 'username description image address'
                     });
-                io.to("public").emit("public_user", { user, users });
+                socket.emit("public_user", { user, users });
             }
         } catch (error) {
             console.log(error);
@@ -259,7 +259,7 @@ io.on("connection", (socket: Socket) => {
                         path: 'followings',
                         select: 'username description image address'
                     });
-                io.to("public").emit("public_user", { user, users });
+                socket.emit("public_user", { user, users });
             }
         } catch (error) {
             console.log(error);

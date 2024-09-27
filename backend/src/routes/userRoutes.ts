@@ -4,7 +4,8 @@ import { userRegister, getUserByAddress, getAllUser } from "../controllers/userC
 const router = Router();
 
 router.post("/user/register", userRegister);
+
+router.get("/user/get/all/users", getAllUser);
 router.get("/user/get/:address", getUserByAddress);
-router.get("/user/getAllUsers", getAllUser);
 
 export default router;
