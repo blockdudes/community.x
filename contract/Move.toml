@@ -1,16 +1,23 @@
 [package]
-name = "governance"
+name = "Governance"
 version = "1.0.0"
 authors = []
+upgrade_policy = "compatible"
 
 [addresses]
-owner_addr = "0x43a83959e6fe5a22f2262cfaed75830c34be8c2091be5c01476c89180af7a211"
+std = "_"
+aptos_framework = "0x1"
+aptos_std = "0x1"
+Extensions = "0x1"
+myaddr = "0x4bd606f80f5a812abfd7d8311098c435ff2a1d7de8531f8abb8240856e2f74a2"
 
 [dev-addresses]
 
 [dependencies.AptosFramework]
 git = "https://github.com/aptos-labs/aptos-core.git"
-rev = "mainnet"
+rev = "devnet"
 subdir = "aptos-move/framework/aptos-framework"
 
+
 [dev-dependencies]
+
