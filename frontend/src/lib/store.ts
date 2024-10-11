@@ -1,15 +1,23 @@
 import { configureStore } from '@reduxjs/toolkit'
-import contractReducer  from "./features/contractSlice";
+import contractReducer from "./features/contractSlice";
+import FetchPrivateSpaceReducer from './features/FetchPrivateSpaceSlice';
+import FetchAllPostReducer from './features/FetchAllPostSlice';
+import FetchAllUsersReducer from './features/FetchAllUsersSlice';
 
 export const makeStore = () => {
   return configureStore({
     reducer: {
-      contract: contractReducer
-    }  })
+      contract: contractReducer,
+      fetchPrivateSpace: FetchPrivateSpaceReducer,
+      fetchAllPost: FetchAllPostReducer,
+      fetchAllUser: FetchAllUsersReducer,
+    },
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware({
+      serializableCheck: false,
+    }),
+  })
 }
 
-// Infer the type of makeStore
 export type AppStore = ReturnType<typeof makeStore>
-// Infer the `RootState` and `AppDispatch` types from the store itself
 export type RootState = ReturnType<AppStore['getState']>
 export type AppDispatch = AppStore['dispatch']

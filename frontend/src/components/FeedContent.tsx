@@ -1,162 +1,104 @@
 "use client"
+import React, { useState, useEffect, useRef, } from 'react';
+import io, { Socket } from "socket.io-client";
+import { useRouter, usePathname } from "next/navigation";
+import axios from "axios";
 
-import React, { useState } from 'react'
+import { fetchAllPost } from "@/lib/features/FetchAllPostSlice";
+import { fetchAllUsers } from "@/lib/features/FetchAllUsersSlice";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { parsePathForPostData } from "@/utils/helper";
 import CreatePost from './CreatePost'
 import Post from './PostComponent'
 
-interface Comment {
-  id: number
-  author: string
-  avatar: string
-  content: string
-  time: string
-}
+export default function FeedContent() {
+  // const path = usePathname();
+  const path = "/home";
 
-interface Post {
-  id: number
-  author: string
-  avatar: string
-  time: string
-  content: string
-  resources: {
-    resourceUrl: string
-    dataType: string
-  }[]
-  likes: number
-  comments: Comment[]
-  reposts: number
-  liked: boolean
-  reposted: boolean
-}
+  // const address = (useWallet()).account?.address;
+  const account = "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6";
 
+  const dispatch = useAppDispatch();
+  const socketRef = useRef<Socket | null>(null);
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [users, setUsers] = useState([]);
+  const posts = useAppSelector(state => state.fetchAllPost.posts);
+  const userProfile = (useAppSelector(state => state.fetchAllUser.users)).find(user => user.address === account);
+  const { space, privateSpaceId, channel } = parsePathForPostData(path);
 
-interface PostData {
-  id: number,
-  message: string,
-  resources: {
-    resourceUrl: string;
-    dataType: string;
-  }[];
-}
-
-
-interface FeedContentProps {
-  selectedSpace: any
-}
-
-export default function FeedContent({ selectedSpace }: FeedContentProps) {
-  const [posts, setPosts] = useState<Post[]>([
-    {
-      id: 1,
-      author: 'George Lobko',
-      avatar: '/placeholder.svg?height=32&width=32',
-      time: '2 hours ago',
-      content: 'Hi everyone, today I was on the most beautiful mountain in the world 🌎, I also want to say hi to Silena, Olya and Davis!',
-      resources: [
-        {
-          resourceUrl: 'https://tomato-characteristic-quail-246.mypinata.cloud/ipfs/bafkreib74sqrflitgziqaqvsgtynck6xnhlx3u5fmdyge7sflhy6b5cvmy',
-          dataType: 'jpeg',
-        },
-        {
-          resourceUrl: 'https://tomato-characteristic-quail-246.mypinata.cloud/ipfs/bafkreib74sqrflitgziqaqvsgtynck6xnhlx3u5fmdyge7sflhy6b5cvmy',
-          dataType: 'jpeg',
+  useEffect(() => {
+    dispatch(fetchAllUsers())
+    checkAuthStatus();
+    if (!socketRef.current) {
+      socketRef.current = io(process.env.NEXT_PUBLIC_BACKEND_API_URL as string);
+      return () => {
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+          socketRef.current = null;
         }
-      ],
-      likes: 6355,
-      comments: [
-        {
-          id: 1,
-          author: 'Jane Doe',
-          avatar: '/placeholder.svg?height=32&width=32',
-          content: 'Wow, that looks amazing! Which mountain is it?',
-          time: '1 hour ago'
-        },
-        {
-          id: 2,
-          author: 'John Smith',
-          avatar: '/placeholder.svg?height=32&width=32',
-          content: 'Great shot! The view must have been breathtaking.',
-          time: '30 minutes ago'
-        },
-        {
-          id: 3,
-          author: 'Alice Johnson',
-          avatar: '/placeholder.svg?height=32&width=32',
-          content: 'I wish I could visit there someday!',
-          time: '15 minutes ago'
-        },
-        {
-          id: 4,
-          author: 'Bob Williams',
-          avatar: '/placeholder.svg?height=32&width=32',
-          content: 'What camera did you use for this shot?',
-          time: '5 minutes ago'
-        },
-      ],
-      reposts: 23,
-      liked: false,
-      reposted: false,
-    },
-    // Add more posts here
-  ])
-
-  const [postData, setPostData] = useState<PostData[]>([
-    {
-      id: 1,
-      message: '',
-      resources: [
-        {
-          resourceUrl: '',
-          dataType: '',
-        }
-      ],
+      };
     }
-  ])
+  }, [])
 
-  const handleLike = (postId: number) => {
-    setPosts(posts.map(post => 
-      post.id === postId ? { ...post, likes: post.liked ? post.likes - 1 : post.likes + 1, liked: !post.liked } : post
-    ))
-  }
+  useEffect(() => {
+    if (isAuthenticated && socketRef.current && userProfile) {
+      socketRef.current.emit("join_space", { space: "public" });
+      socketRef.current.on("fetch_post", (post) => {
+        dispatch(fetchAllPost(post));
+      });
+      socketRef.current.on("public_user", (data: any) => {
+        setUsers(data?.users);
+      });
+      dispatch(fetchAllPost({ space: space, privateSpaceId: privateSpaceId, channel: channel, userId: (userProfile as any)?._id }));
+      fetchAllUser();
+    }
+  }, [isAuthenticated, userProfile])
 
-  const handleRepost = (postId: number) => {
-    setPosts(posts.map(post => 
-      post.id === postId ? { ...post, reposts: post.reposted ? post.reposts - 1 : post.reposts + 1, reposted: !post.reposted } : post
-    ))
-  }
-
-  const handleComment = (postId: number, newComment: string) => {
-    if (newComment.trim()) {
-      setPosts(posts.map(post => 
-        post.id === postId ? { 
-          ...post, 
-          comments: [
-            {
-              id: post.comments.length + 1,
-              author: 'You',
-              avatar: '/placeholder.svg?height=32&width=32',
-              content: newComment,
-              time: 'Just now'
-            },
-            ...post.comments
-          ]
-        } : post
-      ))
+  const fetchAllUser = async () => {
+    try {
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/all/users`);
+      setUsers(res.data?.users);
+    } catch (error) {
+      console.log(error);
     }
   }
 
-  
+  const checkAuthStatus = async () => {
+    try {
+      const isAuth = (await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/${account}`))?.data?.isAuth;
+      if (!isAuth) {
+        router.push('/register');
+      } else {
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error("Error fetching user:", error);
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <CreatePost selectedSpace={selectedSpace} postData={postData} setPostData={setPostData} />
+      <CreatePost
+        socketRef={socketRef}
+        isAuthenticated={isAuthenticated}
+        account={account}
+        space={space}
+        privateSpaceId={privateSpaceId}
+        channel={channel}
+      />
 
-      {posts.map(post => (
-        <Post 
-          key={post.id} 
-          post={post} 
-          handleLike={handleLike} 
-          handleRepost={handleRepost} 
-          handleComment={handleComment} 
+      {posts && posts.map(post => (
+        <Post
+          post={post}
+          account={account}
+          socketRef={socketRef}
+          key={(post as any)._id}
+          isAuthenticated={isAuthenticated}
+          space={space}
+          privateSpaceId={privateSpaceId}
+          channel={channel}
         />
       ))}
     </div>

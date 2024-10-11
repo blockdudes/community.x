@@ -4,18 +4,19 @@ import { Dialog, DialogOverlay, DialogContent, DialogClose } from './ui/dialog';
 const ResourceModal = ({ isOpen, onClose, resourceUrl, dataType }: { isOpen: boolean, onClose: () => void, resourceUrl: string, dataType: string }) => {
     const renderContent = () => {
         switch (dataType) {
+            case 'webp':
             case 'jpg':
             case 'jpeg':
             case 'png':
             case 'gif':
-                return <img src={resourceUrl} alt="Resource" className="w-full h-full object-cover" />;
+                return <img src={`https://tomato-characteristic-quail-246.mypinata.cloud/ipfs/${resourceUrl}`} alt="Resource" className="w-full h-full object-cover" />;
             case 'mp4':
             case 'webm':
-                return <video src={resourceUrl} controls className="w-full h-full object-cover" />;
+                return <video src={`https://tomato-characteristic-quail-246.mypinata.cloud/ipfs/${resourceUrl}`} controls className="w-full h-full object-cover" />;
             case 'pdf':
             case 'doc':
             case 'docx':
-                return <iframe src={`${resourceUrl}#zoom=40`} className="w-full h-[90vh] object-cover" />;
+                return <iframe src={`${`https://tomato-characteristic-quail-246.mypinata.cloud/ipfs/${resourceUrl}`}#zoom=40`} className="w-full h-[90vh] object-cover" />;
             default:
                 return <div className="h-full w-full flex items-center justify-center bg-gray-200">Unsupported file type</div>;
         }

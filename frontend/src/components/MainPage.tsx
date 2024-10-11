@@ -1,5 +1,4 @@
 "use client"
-
 import React, { useState } from 'react'
 import { Users } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -22,7 +21,7 @@ export default function MainPage() {
   return (
     <Card className="bg-white rounded-2xl overflow-hidden shadow-none border-none">
       <div className="flex flex-col lg:flex-row">
-        
+
         {/* Mobile Header */}
         <div className="lg:hidden flex justify-between items-center p-2 border-b">
           <Sheet>
@@ -50,7 +49,7 @@ export default function MainPage() {
         {/* Main Content */}
         <div className="lg:w-3/5 bg-gray-100 p-2 lg:p-4">
           <ScrollArea className="h-[calc(100vh-2rem)]">
-            {selectedTab === 'home' && <FeedContent selectedSpace={selectedSpace} />}
+            {selectedTab === 'home' && <FeedContent />}
             {selectedTab === 'private-space' && <PrivateSpaceContent selectedSpace={selectedSpace} selectedChannel={selectedChannel} />}
             {selectedTab === 'join-space' && <JoinSpaceContent />}
             {selectedTab === 'profile' && <ProfileContent />}
