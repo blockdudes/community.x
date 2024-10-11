@@ -123,7 +123,7 @@ io.on("connection", (socket: Socket) => {
         try {
             const updatedPost = await postModel.findOneAndUpdate(
                 { _id: data._id },
-                { $addToSet: { comments: { user: data.commentBy, comment: data.comment } } },
+                { $addToSet: { comments: { user: data.commentBy, comment: data.comment, timestamp: Date.now() } } },
                 { new: true }
             );
 
@@ -150,6 +150,8 @@ io.on("connection", (socket: Socket) => {
             const post = await postModel.findById(data._id);
             if (post && post.createdBy !== data.repostBy) {
                 const timestamp = Date.now();
+
+                await postModel.findByIdAndUpdate(data._id, { $inc: { repost: 1 } });
 
                 const createRepost = await postModel.create({
                     title: post.title,

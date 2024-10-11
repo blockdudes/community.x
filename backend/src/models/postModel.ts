@@ -21,6 +21,10 @@ const commentSchema: Schema<Comment> = new Schema({
     comment: {
         type: String,
         required: true
+    },
+    timestamp: {
+        type: Number,
+        required: true
     }
 }, { _id: false });
 
@@ -76,6 +80,10 @@ const postSchema: Schema<Post> = new Schema({
     },
     private: {
         type: privateSchema
+    },
+    repost: {
+        type: Number,
+        default: 0
     }
 })
 

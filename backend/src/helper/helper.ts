@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 export const fetchPublicPost = async (userId: string, space: string, channel: string | null, privateSpaceId: mongoose.Types.ObjectId | null): Promise<{ publicPost: Post[], followingPost: Post[] }> => {
     try {
         const postsFind = await postModel.find()
-            .populate('createdBy', 'username description image address')
+            .populate('createdBy', 'username description image address name')
             .populate('repostBy', 'username description image address')
             .populate({
                 path: 'likes',
@@ -14,7 +14,7 @@ export const fetchPublicPost = async (userId: string, space: string, channel: st
             })
             .populate({
                 path: 'comments.user',
-                select: 'username description image address'
+                select: 'username description image address name'
             })
             .exec();
 

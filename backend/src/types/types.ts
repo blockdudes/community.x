@@ -52,6 +52,7 @@ export interface CommentPostBody {
 export interface Comment extends Document {
     user: Types.ObjectId;
     comment: string;
+    timestamp: number;
 }
 
 export interface Private extends Document {
@@ -72,4 +73,5 @@ export interface Post extends Document {
     type: "created" | "repost";
     space: "public" | "private";
     private: Private;
+    repost: number;
 }
