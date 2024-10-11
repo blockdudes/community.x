@@ -5,15 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ImageIcon, VideoIcon, FileIcon, Send, X } from 'lucide-react';
 import { uploadFileToPinata } from '@/utils/pinnata';
-
-interface CreatePostProps {
-  selectedSpace: any;
-  postData: PostData[];
-  setPostData: React.Dispatch<React.SetStateAction<PostData[]>>;
-}
-
 interface PostData {
-  id: number;
   resources: {
     resourceUrl: string;
     dataType: string;
@@ -21,55 +13,44 @@ interface PostData {
   message: string;
 }
 
-const CreatePost: React.FC<CreatePostProps> = ({ selectedSpace, postData, setPostData }) => {
-  const [selectedFiles, setSelectedFiles] = useState<{ [key: number]: File[] }>({});
-  const [filePreviews, setFilePreviews] = useState<{ [key: number]: string[] }>({});
+const CreatePost: React.FC = () => {
+  const [newPost, setNewPost] = useState<PostData>({
+    resources: [],
+    message: '',
+  });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [filePreviews, setFilePreviews] = useState<string[]>([]);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, postId: number) => {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
       const newFiles = Array.from(files);
       const newFilePreviews = newFiles.map(file => URL.createObjectURL(file));
       const fileExtensions = newFiles.map(file => file.name.split('.').pop() || '');
 
-      setSelectedFiles(prevFiles => ({
-        ...prevFiles,
-        [postId]: [...(prevFiles[postId] || []), ...newFiles]
-      }));
+      setSelectedFiles([...selectedFiles, ...newFiles]);
+      setFilePreviews([...filePreviews, ...newFilePreviews]);
 
-      setFilePreviews(prevPreviews => ({
-        ...prevPreviews,
-        [postId]: [...(prevPreviews[postId] || []), ...newFilePreviews]
-      }));
-
-      setPostData(prevData => prevData.map(post => post.id === postId ? {
-        ...post,
+      setNewPost({
+        ...newPost,
         resources: [
-          ...post.resources,
+          ...newPost.resources,
           ...newFiles.map((file, index) => ({
             resourceUrl: newFilePreviews[index],
-            dataType: fileExtensions[index]
+            dataType: fileExtensions[index],
           }))
         ]
-      } : post));
+      });
     }
   };
 
-  const removeFile = (postId: number, fileIndex: number) => {
-    setSelectedFiles(prevFiles => ({
-      ...prevFiles,
-      [postId]: prevFiles[postId].filter((_, index) => index !== fileIndex)
-    }));
-
-    setFilePreviews(prevPreviews => ({
-      ...prevPreviews,
-      [postId]: prevPreviews[postId].filter((_, index) => index !== fileIndex)
-    }));
-
-    setPostData(prevData => prevData.map(post => post.id === postId ? {
-      ...post,
-      resources: post.resources.filter((_, index) => index !== fileIndex)
-    } : post));
+  const removeFile = (fileIndex: number) => {
+    setSelectedFiles(selectedFiles.filter((_, index) => index !== fileIndex));
+    setFilePreviews(filePreviews.filter((_, index) => index !== fileIndex));
+    setNewPost({
+      ...newPost,
+      resources: newPost.resources.filter((_, index) => index !== fileIndex)
+    });
   };
 
   const formatFileSize = (size: number) => {
@@ -82,27 +63,30 @@ const CreatePost: React.FC<CreatePostProps> = ({ selectedSpace, postData, setPos
     }
   };
 
-  const handleCreatePost = async (postId: number) => {
-    const post = postData.find(p => p.id === postId);
-    if (post && selectedFiles[postId]) {
+  const handleCreatePost = async () => {
+    if (newPost) {
       try {
-        const uploadPromises = selectedFiles[postId].map(file => uploadFileToPinata(file));
+        const uploadPromises = selectedFiles.map(file => uploadFileToPinata(file));
         const responses = await Promise.all(uploadPromises);
 
         const updatedResources = responses.map((response, index) => ({
           resourceUrl: response.IpfsHash,
-          dataType: post.resources[index].dataType
+          dataType: newPost.resources[index].dataType
         }));
 
-        setPostData(prevData => prevData.map(p => p.id === postId ? {
-          ...p,
+        const finalPost = {
+          ...newPost,
           resources: updatedResources
-        } : p));
+        };
 
-        if (responses.some(response => !response.IpfsHash) || !post.message) {
-          throw new Error("File upload failed");
-        }
-        // Handle post creation logic here
+
+        setNewPost({
+          resources: [],
+          message: '',
+        });
+        setSelectedFiles([]);
+        setFilePreviews([]);
+
       } catch (error) {
         console.error("File upload failed:", error);
       }
@@ -111,116 +95,115 @@ const CreatePost: React.FC<CreatePostProps> = ({ selectedSpace, postData, setPos
 
   return (
     <div>
-      {postData.map(post => (
-        <Card key={post.id} className="shadow-sm rounded-lg mb-4">
-          <CardContent className="p-4">
-            <div className="flex items-center mb-4">
-              <Avatar className="h-8 w-8 mr-3">
-                <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Profile" />
-                <AvatarFallback>BN</AvatarFallback>
-              </Avatar>
-              <Input
-                placeholder="Create a post"
-                className="text-sm h-9 w-full"
-                value={post.message}
-                onChange={(e) => setPostData(prevData => prevData.map(p => p.id === post.id ? { ...p, message: e.target.value } : p))}
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <div className="flex space-x-2">
-                <Button variant="ghost" size="sm" className="text-xs">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    id={`upload-image-${post.id}`}
-                    onChange={(e) => handleFileUpload(e, post.id)}
-                  />
-                  <label htmlFor={`upload-image-${post.id}`} className="cursor-pointer flex items-center">
-                    <ImageIcon className="mr-1 h-4 w-4" /> Upload Image
-                  </label>
-                </Button>
-                <Button variant="ghost" size="sm" className="text-xs">
-                  <input
-                    type="file"
-                    accept="video/*"
-                    multiple
-                    className="hidden"
-                    id={`upload-video-${post.id}`}
-                    onChange={(e) => handleFileUpload(e, post.id)}
-                  />
-                  <label htmlFor={`upload-video-${post.id}`} className="cursor-pointer flex items-center">
-                    <VideoIcon className="mr-1 h-4 w-4" /> Upload Video
-                  </label>
-                </Button>
-                <Button variant="ghost" size="sm" className="text-xs">
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    multiple
-                    className="hidden"
-                    id={`upload-file-${post.id}`}
-                    onChange={(e) => handleFileUpload(e, post.id)}
-                  />
-                  <label htmlFor={`upload-file-${post.id}`} className="cursor-pointer flex items-center">
-                    <FileIcon className="mr-1 h-4 w-4" /> Upload File
-                  </label>
-                </Button>
-              </div>
-              <Button size="sm" className="text-xs" onClick={() => handleCreatePost(post.id)}>
-                <Send className="mr-1 h-4 w-4" /> Post
+      <Card className="shadow-sm rounded-lg mb-4">
+        <CardContent className="p-4">
+          <div className="flex items-center mb-4">
+            <Avatar className="h-8 w-8 mr-3">
+              <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Profile" />
+              <AvatarFallback>BN</AvatarFallback>
+            </Avatar>
+            <Input
+              placeholder="Create a post"
+              className="text-sm h-9 w-full"
+              value={newPost.message}
+              onChange={(e) => setNewPost({ ...newPost, message: e.target.value })}
+            />
+          </div>
+          <div className="flex justify-between items-center">
+            <div className="flex space-x-2">
+              <Button variant="ghost" size="sm" className="text-xs">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  id="upload-image"
+                  onChange={handleFileUpload}
+                />
+                <label htmlFor="upload-image" className="cursor-pointer flex items-center">
+                  <ImageIcon className="mr-1 h-4 w-4" /> Upload Image
+                </label>
+              </Button>
+              <Button variant="ghost" size="sm" className="text-xs">
+                <input
+                  type="file"
+                  accept="video/*"
+                  multiple
+                  className="hidden"
+                  id="upload-video"
+                  onChange={handleFileUpload}
+                />
+                <label htmlFor="upload-video" className="cursor-pointer flex items-center">
+                  <VideoIcon className="mr-1 h-4 w-4" /> Upload Video
+                </label>
+              </Button>
+              <Button variant="ghost" size="sm" className="text-xs">
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  multiple
+                  className="hidden"
+                  id="upload-file"
+                  onChange={handleFileUpload}
+                />
+                <label htmlFor="upload-file" className="cursor-pointer flex items-center">
+                  <FileIcon className="mr-1 h-4 w-4" /> Upload File
+                </label>
               </Button>
             </div>
+            <Button size="sm" className="text-xs" onClick={handleCreatePost}>
+              <Send className="mr-1 h-4 w-4" /> Post
+            </Button>
+          </div>
           <div className="flex gap-4">
-          {filePreviews[post.id] && filePreviews[post.id].map((preview, index) => (
+            {filePreviews.map((preview, index) => (
               <div key={index} className="mt-4 relative inline-block ">
-                {selectedFiles[post.id][index]?.type.startsWith('image/') && (
+                {selectedFiles[index]?.type.startsWith('image/') && (
                   <img
                     src={preview}
                     alt="Preview"
                     className="h-20 w-20 object-cover rounded"
                   />
                 )}
-                {selectedFiles[post.id][index]?.type.startsWith('video/') && (
+                {selectedFiles[index]?.type.startsWith('video/') && (
                   <video
                     src={preview}
                     controls
                     className="h-20 w-20 object-cover rounded"
                   />
                 )}
-                {selectedFiles[post.id][index]?.type === 'application/pdf' && (
+                {selectedFiles[index]?.type === 'application/pdf' && (
                   <iframe
                     src={preview}
                     className="h-20 w-20 object-cover rounded"
                   />
                 )}
-                {(selectedFiles[post.id][index]?.type === 'application/msword' || selectedFiles[post.id][index]?.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') && (
+                {(selectedFiles[index]?.type === 'application/msword' || selectedFiles[index]?.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') && (
                   <iframe
                     src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(preview)}`}
                     className="h-20 w-20 object-cover rounded"
                   />
                 )}
-                {!selectedFiles[post.id][index]?.type.startsWith('image/') && !selectedFiles[post.id][index]?.type.startsWith('video/') && !selectedFiles[post.id][index]?.type.startsWith('application/pdf') && !selectedFiles[post.id][index]?.type.startsWith('application/msword') && !selectedFiles[post.id][index]?.type.startsWith('application/vnd.openxmlformats-officedocument.wordprocessingml.document') && (
+                {!selectedFiles[index]?.type.startsWith('image/') && !selectedFiles[index]?.type.startsWith('video/') && !selectedFiles[index]?.type.startsWith('application/pdf') && !selectedFiles[index]?.type.startsWith('application/msword') && !selectedFiles[index]?.type.startsWith('application/vnd.openxmlformats-officedocument.wordprocessingml.document') && (
                   <div className="h-20 w-20 flex items-center justify-center bg-gray-200 rounded">
-                    <span className="text-[6px]">{selectedFiles[post.id][index]?.name}</span>
+                    <span className="text-[6px]">{selectedFiles[index]?.name}</span>
                   </div>
                 )}
                 <button
-                  onClick={() => removeFile(post.id, index)}
+                  onClick={() => removeFile(index)}
                   className="absolute -top-2 -right-2 bg-black text-white rounded-full p-1"
                 >
                   <X className="h-3 w-3" />
                 </button>
-                <span className="text-sm">{selectedFiles[post.id][index] && formatFileSize(selectedFiles[post.id][index].size)}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+                <span className="text-sm">{selectedFiles[index] && formatFileSize(selectedFiles[index].size)}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
 export default CreatePost;
+``

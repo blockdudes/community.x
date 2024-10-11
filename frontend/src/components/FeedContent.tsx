@@ -27,6 +27,8 @@ interface Post {
   reposts: number
   liked: boolean
   reposted: boolean
+  upvotes: number
+  downvotes: number
 }
 
 
@@ -40,11 +42,8 @@ interface PostData {
 }
 
 
-interface FeedContentProps {
-  selectedSpace: any
-}
 
-export default function FeedContent({ selectedSpace }: FeedContentProps) {
+export default function FeedContent() {
   const [posts, setPosts] = useState<Post[]>([
     {
       id: 1,
@@ -96,6 +95,8 @@ export default function FeedContent({ selectedSpace }: FeedContentProps) {
       reposts: 23,
       liked: false,
       reposted: false,
+      upvotes: 123, // Add initial upvotes
+      downvotes: 5, // Add initial downvotes
     },
     // Add more posts here
   ])
@@ -145,11 +146,23 @@ export default function FeedContent({ selectedSpace }: FeedContentProps) {
     }
   }
 
+  const handleUpvote = (postId: number) => {
+    setPosts(posts.map(post => 
+      post.id === postId ? { ...post, upvotes: (post.upvotes || 0) + 1 } : post
+    ))
+  }
+
+  const handleDownvote = (postId: number) => {
+    setPosts(posts.map(post => 
+      post.id === postId ? { ...post, downvotes: (post.downvotes || 0) + 1 } : post
+    ))
+  }
+
   
   return (
     <div className="space-y-4">
-      <CreatePost selectedSpace={selectedSpace} postData={postData} setPostData={setPostData} />
-
+      <CreatePost />
+      
       {posts.map(post => (
         <Post 
           key={post.id} 
@@ -157,6 +170,7 @@ export default function FeedContent({ selectedSpace }: FeedContentProps) {
           handleLike={handleLike} 
           handleRepost={handleRepost} 
           handleComment={handleComment} 
+          selectedChannel={'home'}
         />
       ))}
     </div>

@@ -9,9 +9,16 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 import { AlertCircle, Upload, User } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { WalletSelector } from './WalletSelector'
+import { useWallet } from '@aptos-labs/wallet-adapter-react'
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { connected } = useWallet();
+  
+  if(!connected) {
+    router.push('/');
+  }
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState({
     username: '',
@@ -51,20 +58,15 @@ export default function RegisterPage() {
       return
     }
 
-    // Here you would typically send the data to your backend
-    // For this example, we'll just log it to the console
-    console.log('Form submitted:', { ...formData, profileImage })
 
-    // Simulate an API call
     try {
-      // Replace this with your actual API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // If successful, redirect to a success page or dashboard
+
       router.push('/dashboard')
     } catch (err) {
       setError('An error occurred while registering. Please try again.')
     }
+    router.push('/')
   }
 
   return (
@@ -80,7 +82,7 @@ export default function RegisterPage() {
               <div className="space-y-2">
                 <Label htmlFor="profile_picture">Profile Picture</Label>
                 <div className="flex items-center space-x-4">
-                  <div 
+                  <div
                     className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden"
                     onClick={() => fileInputRef.current?.click()}
                   >
@@ -90,8 +92,8 @@ export default function RegisterPage() {
                       <User className="w-12 h-12 text-gray-400" />
                     )}
                   </div>
-                  <Button 
-                    type="button" 
+                  <Button
+                    type="button"
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
                   >
@@ -161,6 +163,9 @@ export default function RegisterPage() {
           </p>
         </CardFooter>
       </Card>
+      <div className="absolute top-0 right-0 m-8 bg-white rounded-md ">
+        <WalletSelector />
+      </div>
     </div>
   )
 }

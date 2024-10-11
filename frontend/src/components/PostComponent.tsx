@@ -3,9 +3,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Heart, MessageCircle, Send, MoreVertical, SearchIcon, FullscreenIcon } from 'lucide-react'
+import { Heart, MessageCircle, Send, MoreVertical, SearchIcon, FullscreenIcon, ThumbsUp, ThumbsDown, CircleArrowUpIcon } from 'lucide-react'
 import Image from 'next/image'
 import ResourceModal from './ResourceModal'
+import { CircleArrowDown } from 'lucide-react'
 
 interface Comment {
     id: number
@@ -33,14 +34,20 @@ interface PostProps {
         reposts: number
         liked: boolean
         reposted: boolean
+        upvotes?: number; // Separate upvotes
+        downvotes?: number; // Separate downvotes
     }
 
     handleLike: (postId: number) => void
     handleRepost: (postId: number) => void
     handleComment: (postId: number, newComment: string) => void
+    handleUpvote?: (postId: number) => void; 
+    handleDownvote?: (postId: number) => void; 
+    selectedChannel: string;
 }
 
-const PostComponent: React.FC<PostProps> = ({ post, handleLike, handleRepost, handleComment }) => {
+const PostComponent: React.FC<PostProps> = ({ post, handleLike, handleRepost, handleComment, handleUpvote, handleDownvote, selectedChannel }) => {
+
     const [commentingOn, setCommentingOn] = useState<number | null>(null)
     const [newComment, setNewComment] = useState('')
     const commentRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
@@ -55,7 +62,6 @@ const PostComponent: React.FC<PostProps> = ({ post, handleLike, handleRepost, ha
         setSelectedResource(resource);
         setIsModalOpen(true);
     };
-
 
     return (
         <Card key={post.id} className="bg-blue-50">
@@ -77,7 +83,7 @@ const PostComponent: React.FC<PostProps> = ({ post, handleLike, handleRepost, ha
                 </div>
                 <p className="text-xs mb-2">{post.content}</p>
                 <div className="mb-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                    {post.resources.map((resource, index) => 
+                    {post.resources.map((resource, index) =>
                     (
                         <div key={index} className="relative w-full h-40 rounded-md group" onClick={() => openModal(resource)}>
                             {['jpg', 'jpeg', 'img', 'png'].some(ext => resource.dataType.includes(ext)) && (
@@ -115,6 +121,19 @@ const PostComponent: React.FC<PostProps> = ({ post, handleLike, handleRepost, ha
                         <Button variant="ghost" size="sm" className={`text-[10px] ${post.reposted ? 'text-green-500' : ''}`} onClick={() => handleRepost(post.id)}>
                             <Send className="mr-1 h-3 w-3" /> {post.reposts}
                         </Button>
+
+                        {selectedChannel === 'governance' && (
+                            <>
+                                <Button variant="ghost" size="sm" className={`text-[10px] ${post.upvotes ? 'text-green-500' : ''}`} onClick={() => handleUpvote?.(post.id)}>
+                                    <CircleArrowDown className="mr-1 h-3 w-3" /> {post.upvotes || 0}
+                                    
+                                </Button>
+
+                                <Button variant="ghost" size="sm" className={`text-[10px] ${post.downvotes ? 'text-red-500' : ''}`} onClick={() => handleDownvote?.(post.id)}>
+                                    <CircleArrowUpIcon className="mr-1 h-3 w-3" /> {post.downvotes || 0}
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
                 {commentingOn === post.id && (

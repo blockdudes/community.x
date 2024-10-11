@@ -15,7 +15,7 @@ myaddr = "0x4bd606f80f5a812abfd7d8311098c435ff2a1d7de8531f8abb8240856e2f74a2"
 
 [dependencies.AptosFramework]
 git = "https://github.com/aptos-labs/aptos-core.git"
-rev = "devnet"
+rev = "testnet"
 subdir = "aptos-move/framework/aptos-framework"
 
 
