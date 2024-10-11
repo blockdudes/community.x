@@ -1,89 +1,116 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import React, { useState } from 'react'
-import { Bell, MessageCircle, Users, Image as ImageIcon, LogOutIcon, Settings, FileText, MapPin, Globe, Send, MoreVertical, Heart, Music, Utensils, Home, Lock, UserPlus, User, Search, ChevronDown, ChevronUp, Plus, X, TrendingUp } from 'lucide-react'
+import React, { useState, useEffect } from 'react';
+import { Home, Lock, UserPlus, User, ChevronDown, ChevronUp } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { useRouter, usePathname } from 'next/navigation';
 import { WalletSelector as ShadcnWalletSelector } from "./WalletSelector";
 import { useAppSelector } from '@/lib/hooks';
+import { useParams } from 'next/navigation';
 
 interface OpenSpaces {
   [key: number]: boolean;
 }
 
-export function MobileSidebar({ setSelectedTab, setSelectedSpace, setSelectedChannel, selectedSpace, selectedChannel }: { setSelectedTab: (tab: string) => void, setSelectedSpace: (space: any) => void, setSelectedChannel: (channel: string) => void, selectedSpace: any, selectedChannel: string }) {
+interface User {
+  name: string;
+  username: string;
+  avatar: string;
+}
+
+export function MobileSidebar() {
   return (
     <div className="py-2">
-      <SidebarContent setSelectedTab={setSelectedTab} setSelectedSpace={setSelectedSpace} setSelectedChannel={setSelectedChannel} selectedSpace={selectedSpace} selectedChannel={selectedChannel} />
+      <SidebarContent />
     </div>
-  )
+  );
 }
 
-export function DesktopSidebar({ setSelectedTab, setSelectedSpace, setSelectedChannel, selectedSpace, selectedChannel }: { setSelectedTab: (tab: string) => void, setSelectedSpace: (space: any) => void, setSelectedChannel: (channel: string) => void, selectedSpace: any, selectedChannel: string }) {
-  return <SidebarContent setSelectedTab={setSelectedTab} setSelectedSpace={setSelectedSpace} setSelectedChannel={setSelectedChannel} selectedSpace={selectedSpace} selectedChannel={selectedChannel} />
+export function DesktopSidebar() {
+  return <SidebarContent />;
 }
 
-export function SidebarContent({ setSelectedTab, setSelectedSpace, setSelectedChannel, selectedSpace, selectedChannel }: { setSelectedTab: (tab: string) => void, setSelectedSpace: (space: any) => void, setSelectedChannel: (channel: string) => void, selectedSpace: any, selectedChannel: string }) {
-  const [isPrivateSpacesOpen, setIsPrivateSpacesOpen] = useState(false)
-  const [openSpaces, setOpenSpaces] = useState<OpenSpaces>({})
-  const [activeTab, setActiveTab] = useState('home') // Add state to track active tab
-  const privateSpaces = (useAppSelector(state => state.fetchPrivateSpace)).privateSpace;
+
+export function SidebarContent() {
+  const pathname = usePathname();
+  const [user, setUser] = useState<User | null>(null);
+  const [isPrivateSpacesOpen, setIsPrivateSpacesOpen] = useState(false);
+  const router = useRouter();
   const account = "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6";
 
-  console.log(privateSpaces);
+  const getSelectedSpaceAndChannel = () => {
+    const pathSegments = pathname.split('/');
+    const isPrivate = pathSegments[1] === 'private';
+    if (isPrivate && pathSegments.length >= 4) {
+      const selectedSpaceId = parseInt(pathSegments[2], 10);
+      const selectedChannel = pathSegments[3];
+      return { selectedSpaceId, selectedChannel };
+    }
+    return { selectedSpaceId: null, selectedChannel: null };
+  };
 
+  const { selectedSpaceId, selectedChannel } = getSelectedSpaceAndChannel();
+
+  const [openSpaces, setOpenSpaces] = useState<OpenSpaces>(
+    {
+      [selectedSpaceId || 0]: true,
+    }
+  );
+
+  const privateSpaces = useAppSelector(state => state.fetchPrivateSpace.privateSpace);
   const filteredPrivateSpaces = privateSpaces?.filter((space) => {
     if (Array.isArray(space.members)) {
       return space.members.some((member: any) =>
-        member.address == account
+        member.address === account
       );
     }
     return false;
   });
-
-  console.log(filteredPrivateSpaces);
+  // console.log(privateSpace);
 
 
   // const privateSpaces = [
   //   { id: 1, name: "Crypto Punks", description: "Discuss and trade CryptoPunks NFTs" },
   //   { id: 2, name: "Bored Ape Yacht Club", description: "BAYC enthusiasts and collectors" },
   //   { id: 3, name: "Art Blocks", description: "Generative art NFT community" },
-  // ]
+  // ];
 
   const toggleSpace = (spaceId: number) => {
-    setOpenSpaces(prev => ({ ...prev, [spaceId]: !prev[spaceId] }))
-  }
+    setOpenSpaces((prev) => ({ ...prev, [spaceId]: !prev[spaceId] }));
+  };
 
-  const selectChannel = (space: any, channel: string) => {
-    setSelectedTab('private-space')
-    setSelectedSpace(space)
-    setSelectedChannel(channel)
-    setActiveTab('private-space') // Update active tab
-  }
+  useEffect(() => {
+    if (selectedSpaceId) {
+      setIsPrivateSpacesOpen(true);
+      setOpenSpaces((prev) => ({ ...prev, [selectedSpaceId]: true }));
+      console.log(`Selected Space ID: ${selectedSpaceId}`);
+    }
+  }, [selectedSpaceId]);
 
   return (
-    <>
+    <div className="flex flex-col h-full p-2 w-64">
       <div className="flex items-center my-4">
         <Avatar className="h-8 w-8 mr-2">
-          <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Profile" />
-          <AvatarFallback>BN</AvatarFallback>
+          <AvatarImage src={user?.avatar || "/placeholder.svg?height=32&width=32"} alt="Profile" />
+          <AvatarFallback>{user?.name?.slice(0, 2) || "AN"}</AvatarFallback>
         </Avatar>
         <div>
-          <h2 className="font-semibold text-sm">Bogdan Nikitin</h2>
-          <p className="text-xs text-gray-500">@nikitinteam</p>
+          <h2 className="font-semibold text-sm">{user?.name || "Anonymous"}</h2>
+          <p className="text-xs text-gray-500">@{user?.username || "anonymous"}</p>
         </div>
       </div>
       <nav className="space-y-2 hover:none">
+        {/* Home Button */}
         <Button
           variant="ghost"
           size="sm"
-          className={`w-full justify-start text-xs ${activeTab === 'home' ? 'bg-black text-white bg-opacity-80' : ''}`}
-          onClick={() => {
-            setSelectedTab('home')
-            setActiveTab('home') // Update active tab
-          }}
+          className={`w-full justify-start text-xs ${pathname === '/home' ? 'bg-black text-white bg-opacity-80' : ''}`}
+          onClick={() => router.push('/home')}
         >
           <Home className="mr-2 h-3 w-3" /> Home
         </Button>
+
+        {/* Private Spaces */}
         <Collapsible open={isPrivateSpacesOpen} onOpenChange={setIsPrivateSpacesOpen}>
           <CollapsibleTrigger asChild>
             <Button
@@ -98,8 +125,12 @@ export function SidebarContent({ setSelectedTab, setSelectedSpace, setSelectedCh
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-1 mt-1">
-            {filteredPrivateSpaces && filteredPrivateSpaces.map((space: any) => (
-              <Collapsible key={space._id} open={openSpaces[space._id]} onOpenChange={() => toggleSpace(space._id)}>
+            {filteredPrivateSpaces && filteredPrivateSpaces?.map((space: any) => (
+              <Collapsible
+                key={space._id}
+                open={openSpaces[space._id]}
+                onOpenChange={() => toggleSpace(space._id)}
+              >
                 <CollapsibleTrigger asChild>
                   <Button
                     variant="ghost"
@@ -108,51 +139,49 @@ export function SidebarContent({ setSelectedTab, setSelectedSpace, setSelectedCh
                   >
                     <span>{space.name}</span>
                     {openSpaces[space._id] ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                  </Button>
-                </CollapsibleTrigger>
+                  </Button >
+                </CollapsibleTrigger >
                 <CollapsibleContent className="space-y-1 mt-1">
                   {['general', 'announcement', 'governance'].map((channel) => (
                     <Button
                       key={channel}
                       variant="ghost"
                       size="sm"
-                      className={`w-full justify-start text-xs pl-10 ${activeTab === 'private-space' && selectedSpace?._id === space._id && selectedChannel === channel ? 'bg-black text-white bg-opacity-80 ' : ''}`}
-                      onClick={() => selectChannel(space, channel)}
+                      className={`w-full justify-start text-xs pl-10 ${selectedSpaceId === space._id && selectedChannel === channel ? 'bg-black text-white bg-opacity-80' : ''}`}
+                      onClick={() => router.push(`/private/${space._id}/${channel}`)}
                     >
                       #{channel}
                     </Button>
                   ))}
                 </CollapsibleContent>
-              </Collapsible>
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
+              </Collapsible >
+            ))
+            }
+          </CollapsibleContent >
+        </Collapsible >
+
+        {/* Join Space */}
         <Button
           variant="ghost"
           size="sm"
-          className={`w-full justify-start text-xs ${activeTab === 'join-space' ? 'bg-black text-white' : ''}`}
-          onClick={() => {
-            setSelectedTab('join-space')
-            setActiveTab('join-space') // Update active tab
-          }}
+          className={`w-full justify-start text-xs ${pathname === '/joinSpace' ? 'bg-black text-white' : ''}`}
+          onClick={() => router.push('/joinSpace')}
         >
           <UserPlus className="mr-2 h-3 w-3" /> Join Space
         </Button>
+
+        {/* Profile */}
         <Button
           variant="ghost"
           size="sm"
-          className={`w-full justify-start text-xs ${activeTab === 'profile' ? 'bg-black text-white' : ''}`}
-          onClick={() => {
-            setSelectedTab('profile')
-            setActiveTab('profile') // Update active tab
-          }}
+          className={`w-full justify-start text-xs ${pathname === '/profile' ? 'bg-black text-white' : ''}`}
+          onClick={() => router.push('/profile')}
         >
           <User className="mr-2 h-3 w-3" /> Profile
         </Button>
+
         <ShadcnWalletSelector />
-      </nav>
-    </>
-  )
+      </nav >
+    </div >
+  );
 }
-
-

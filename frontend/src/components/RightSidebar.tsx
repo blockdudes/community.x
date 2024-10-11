@@ -94,7 +94,7 @@ function RightSidebar() {
   }
 
   return (
-    <div className="space-y-10 text-gray-600">
+    <div className="space-y-10 text-gray-600 p-4">
       <section>
         <h2 className="text-sm font-bold mb-3 flex items-center text-gray-600">
           <Users className="w-4 h-4 mr-2" />

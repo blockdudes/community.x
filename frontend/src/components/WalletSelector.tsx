@@ -75,9 +75,9 @@ export function WalletSelector(walletSortingOptions: WalletSortingOptions) {
         <Button 
           	variant="ghost"
             size="sm"
-            className="w-full justify-start text-xs  border-none focus:ring-0"
+            className="w-full justify-start text-xs  border-none focus:ring-0 rounded-md hover:bg-neutral-300"
         >
-          <div className="flex gap-2 items-center justify-start w-full">
+          <div className="flex gap-2 items-center justify-start w-full ">
             <LogOutIcon className="h-3 w-3" />
             <p>{account?.ansName || truncateAddress(account?.address) || "Unknown"}</p>
           </div>
@@ -110,11 +110,11 @@ export function WalletSelector(walletSortingOptions: WalletSortingOptions) {
       <Button 
           	variant="ghost"
             size="sm"
-            className="w-full justify-start text-xs  border-none focus:ring-0"
+            className="w-full justify-start text-xs bg-white focus:ring-0 border-none rounded-md hover:bg-neutral-300"
         >
           <div className="flex gap-2 items-center justify-start w-full">
             <LogInIcon className="h-3 w-3" />
-            <p>Login</p> 
+            <p>Connect Wallet</p> 
           </div>
       </Button>
       </DialogTrigger>

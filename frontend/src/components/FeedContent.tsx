@@ -9,8 +9,8 @@ import { fetchAllUsers } from "@/lib/features/FetchAllUsersSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { parsePathForPostData } from "@/utils/helper";
-import CreatePost from './CreatePost'
 import Post from './PostComponent'
+import CreatePost from "./CreatePost";
 
 export default function FeedContent() {
   // const path = usePathname();
@@ -27,6 +27,8 @@ export default function FeedContent() {
   const posts = useAppSelector(state => state.fetchAllPost.posts);
   const userProfile = (useAppSelector(state => state.fetchAllUser.users)).find(user => user.address === account);
   const { space, privateSpaceId, channel } = parsePathForPostData(path);
+
+  console.log(posts);
 
   useEffect(() => {
     dispatch(fetchAllUsers())
@@ -88,7 +90,6 @@ export default function FeedContent() {
         privateSpaceId={privateSpaceId}
         channel={channel}
       />
-
       {posts && posts.map(post => (
         <Post
           post={post}
@@ -99,6 +100,7 @@ export default function FeedContent() {
           space={space}
           privateSpaceId={privateSpaceId}
           channel={channel}
+          repost={true}
         />
       ))}
     </div>

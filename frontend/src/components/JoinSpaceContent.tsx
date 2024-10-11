@@ -147,7 +147,7 @@ function JoinSpaceContent() {
         <h2 className="text-2xl font-bold">Join Spaces</h2>
         <Dialog open={isCreateSpaceOpen} onOpenChange={(open) => setIsCreateSpaceOpen(open)}>
           <DialogTrigger asChild>
-            <Button size="sm" className="rounded-full h-10 w-10 absolute bottom-4 right-0">
+            <Button size="sm" className="rounded-full h-10 w-10 absolute bottom-4 right-64">
               <Plus className="h-6 w-6" />
             </Button>
           </DialogTrigger>

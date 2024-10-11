@@ -30,9 +30,9 @@ interface PostData {
 
 
 const CreatePost: React.FC<CreatePostProps> = ({ isAuthenticated, socketRef, account, space, privateSpaceId, channel }) => {
-  // const path = usePathname();
-  const path = "/home";
-  // console.log(path);
+  // // const path = usePathname();
+  // const path = "/home";
+  // // console.log(path);
 
   const dispatch = useAppDispatch();
   const userProfile = (useAppSelector(state => state.fetchAllUser.users)).find(user => user.address === account);
@@ -133,8 +133,6 @@ const CreatePost: React.FC<CreatePostProps> = ({ isAuthenticated, socketRef, acc
       console.log("register yourself!");
     }
   };
-
-
 
   return (
     <div>

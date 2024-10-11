@@ -32,7 +32,9 @@ export const userRegister = async (req: Request, res: Response, next: NextFuncti
 export const getUserByAddress = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const address = req.params.address;
-        const userFind = await userModel.findOne({ address });
+        const userFind = await userModel.findOne({ address })
+            .populate('followings', 'username description image address name')
+            .populate('followers', 'username description image address');
         if (!userFind) {
             return res.status(200).json({ user: {}, isAuth: false });
         }
