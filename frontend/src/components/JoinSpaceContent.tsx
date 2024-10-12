@@ -99,6 +99,7 @@ function JoinSpaceContent() {
 
         const createPrivateSpaceObject = {
           name: newSpaceName,
+          description: newSpaceDescription,
           image: fileUpload.IpfsHash,
           createdBy: (userProfile as any)._id,
           entryCondition: {

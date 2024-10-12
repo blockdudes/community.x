@@ -11,7 +11,6 @@ interface FollowUserBody {
   followUserId: string;
 }
 
-
 function ProfileContent() {
   const [user, setUser] = useState<any>();
   const [users, setUsers] = useState<any[]>();
@@ -87,8 +86,6 @@ function ProfileContent() {
           fetchUser();
           fetchAllUsers();
         })
-        // fetchUser();
-        // fetchAllUsers();
       }
     } catch (error) {
       console.log(error);

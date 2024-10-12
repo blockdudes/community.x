@@ -31,6 +31,10 @@ const privateSpaceSchema: Schema<PrivateSpace> = new Schema({
         required: true,
         unique: true
     },
+    description: {
+        type: String,
+        required: true,
+    },
     image: {
         type: String,
         required: true

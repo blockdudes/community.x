@@ -9,7 +9,7 @@ export const createPrivateSpace = async (req: Request, res: Response, next: Next
     try {
         const privateSpaceCreateBody: privateSpaceCreateBodyType = req.body;
 
-        if (!privateSpaceCreateBody.name || !privateSpaceCreateBody.image || !privateSpaceCreateBody.createdBy || !privateSpaceCreateBody.entryCondition.address || !privateSpaceCreateBody.entryCondition.maxAmount || !privateSpaceCreateBody.interactCondition.address || !privateSpaceCreateBody.interactCondition.maxAmount) {
+        if (!privateSpaceCreateBody.name || !privateSpaceCreateBody.description || !privateSpaceCreateBody.image || !privateSpaceCreateBody.createdBy || !privateSpaceCreateBody.entryCondition.address || !privateSpaceCreateBody.entryCondition.maxAmount || !privateSpaceCreateBody.interactCondition.address || !privateSpaceCreateBody.interactCondition.maxAmount) {
             error.message = "Missing required fields";
             (error as any).statusCode = 400;
             return next(error);
@@ -24,6 +24,7 @@ export const createPrivateSpace = async (req: Request, res: Response, next: Next
 
         const privateSpaceCreate = await privateSpaceModel.create({
             name: privateSpaceCreateBody.name,
+            description: privateSpaceCreateBody.description,
             image: privateSpaceCreateBody.image,
             createdBy: privateSpaceCreateBody.createdBy,
             entryCondition: privateSpaceCreateBody.entryCondition,
