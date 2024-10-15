@@ -29,6 +29,9 @@ const commentSchema: Schema<Comment> = new Schema({
 }, { _id: false });
 
 const postSchema: Schema<Post> = new Schema({
+    post_id: {
+        type: String,
+    },
     post: {
         type: String,
         required: true

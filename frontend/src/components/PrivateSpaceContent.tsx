@@ -10,6 +10,8 @@ import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { fetchAllPost } from '@/lib/features/FetchAllPostSlice';
 import { fetchAllUsers } from '@/lib/features/FetchAllUsersSlice';
 import { fetchPrivateSpace } from '@/lib/features/FetchPrivateSpaceSlice';
+import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { fetchProposalsThunk } from '@/lib/features/contractSlice';
 
 
 interface PrivateSpaceContentProps {
@@ -27,6 +29,7 @@ interface Comment {
 
 interface Post {
   id: number
+  post_id: string
   author: string
   avatar: string
   time: string
@@ -66,21 +69,89 @@ function PrivateSpaceContent() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [isOwner, setIsOwner] = useState<boolean>(true);
+  const [isOwner, setIsOwner] = useState<boolean>(false);
   const dispatch = useAppDispatch();
 
   const { space, privateSpaceId, channel } = parsePathForPostData(pathname);
-  console.log(privateSpaceId, channel);
-  const account = "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6";
-  const userProfile = (useAppSelector(state => state.fetchAllUser.users)).find(user => user.address === account);
+  const { account } = useWallet();
+  const userProfile = (useAppSelector(state => state.fetchAllUser.users)).find(user => user.address === account?.address);
   const privateSpaces = (useAppSelector(state => state.fetchPrivateSpace)).privateSpace;
-  const posts = useAppSelector(state => state.fetchAllPost.posts);
-  console.log(posts);
+  const [updatedGovernancePosts, setUpdatedGovernancePosts] = useState<any[]>([]);
+  const posts = useAppSelector(state => state.fetchAllPost.posts || []);
 
+  console.log('posts', posts)
   const findSpace = privateSpaces?.find((space: any) => space._id === privateSpaceId);
-  console.log(findSpace);
 
-  console.log(privateSpaces);
+
+  const fetchGovernanceProposals = async () => {
+    console.log('fetchGovernanceProposals')
+    const governanceResponse = await dispatch(fetchProposalsThunk({ address: (findSpace as any)?.createdBy.address }));
+    console.log('governanceResponse', governanceResponse)
+    // dispatch(fetchAllPost({ space: space, privateSpaceId: privateSpaceId, channel: channel, userId: (userProfile as any)?._id }));
+    let governance = governanceResponse?.payload || [];
+    if (Array.isArray(governance)) {
+      governance = governance.flat();
+    }
+
+    if ((governance as any).length > 0 && socketRef.current) {
+      // console.log('posts',posts)
+      // console.log('socketRef.current')
+      const updatedPosts = (posts as any).map((post: any) => {
+        const matchingProposal = (governance as any).find((proposal: any) => post.post_id === proposal.proposal_id);
+
+        if (matchingProposal) {
+          return {
+            ...post,
+            upvotes: matchingProposal.up_votes || 0,
+            downvotes: matchingProposal.down_votes || 0
+          };
+        }
+        return post;
+      });
+
+      setUpdatedGovernancePosts(updatedPosts);
+    }
+  };
+
+  useEffect(() => {
+    if (channel === 'governance' && posts.length > 0) {
+      console.log('clicked')
+
+      fetchGovernanceProposals();
+    }
+  }, [findSpace, channel, posts]);
+
+  // useEffect(() => {
+  //   const updateGovernancePosts = async () => {
+  //     if (channel === 'governance' && findSpace) {
+  //       const governanceResponse = await dispatch(fetchProposalsThunk({ address: (findSpace as any)?.createdBy.address }));
+  //       let governance = governanceResponse?.payload || [];
+  //       if (Array.isArray(governance)) {
+  //         governance = governance.flat();
+  //       }
+
+  //       if ((governance as any).length > 0) {
+  //         const updatedPosts = (posts as any).map((post: any) => {
+  //           const matchingProposal = (governance as any).find((proposal: any) => post.post_id === proposal.proposal_id);
+
+  //           if (matchingProposal) {
+  //             return {
+  //               ...post,
+  //               upvotes: matchingProposal.up_votes || 0,
+  //               downvotes: matchingProposal.down_votes || 0
+  //             };
+  //           }
+  //           return post;
+  //         });
+  //         setUpdatedGovernancePosts(updatedPosts);
+  //       } else {
+  //         setUpdatedGovernancePosts(posts);
+  //       }
+  //     }
+  //   };
+
+  //   updateGovernancePosts();
+  // }, [posts, findSpace, dispatch, channel]);
 
   useEffect(() => {
     dispatch(fetchAllUsers())
@@ -96,110 +167,31 @@ function PrivateSpaceContent() {
   }, [])
 
   useEffect(() => {
+    if (findSpace) {
+      if ((findSpace as any).createdBy.address === account?.address) {
+        setIsOwner(true);
+      }
+    }
+  }, [account, findSpace])
+
+  useEffect(() => {
     if (socketRef.current) {
       socketRef.current.emit("join_space", { space: space, privateSpaceId: privateSpaceId, channel: channel });
       socketRef.current.on("fetch_post", (post) => {
-        dispatch(fetchAllPost(post));
+        // console.log('running1')
+        const postData = dispatch(fetchAllPost(post));
+        // console.log('running2',postData)
+        if (channel === 'governance') {
+          console.log('running3')
+          posts.length > 0 && fetchGovernanceProposals();
+        }
       });
-      // socketRef.current.on("public_user", (data: any) => {
-      //   setUsers(data?.users);
-      // });
       dispatch(fetchAllPost({ space: space, privateSpaceId: privateSpaceId, channel: channel, userId: (userProfile as any)?._id }));
-      dispatch(fetchPrivateSpace())
-      // fetchAllUser();
+      dispatch(fetchPrivateSpace());
     }
+    setLoading(false);
   }, [])
 
-
-
-
-  // const [posts, setPosts] = useState<Post[]>([
-  //   {
-  //     id: 1,
-  //     author: 'George Lobko',
-  //     avatar: '/placeholder.svg?height=32&width=32',
-  //     time: '2 hours ago',
-  //     content: 'Hi everyone, today I was on the most beautiful mountain in the world 🌎, I also want to say hi to Silena, Olya and Davis!',
-  //     resources: [
-  //       {
-  //         resourceUrl: 'https://tomato-characteristic-quail-246.mypinata.cloud/ipfs/bafkreib74sqrflitgziqaqvsgtynck6xnhlx3u5fmdyge7sflhy6b5cvmy',
-  //         dataType: 'jpeg',
-  //       },
-  //       {
-  //         resourceUrl: 'https://tomato-characteristic-quail-246.mypinata.cloud/ipfs/bafkreib74sqrflitgziqaqvsgtynck6xnhlx3u5fmdyge7sflhy6b5cvmy',
-  //         dataType: 'jpeg',
-  //       }
-  //     ],
-  //     likes: 6355,
-  //     comments: [
-  //       {
-  //         id: 1,
-  //         author: 'Jane Doe',
-  //         avatar: '/placeholder.svg?height=32&width=32',
-  //         content: 'Wow, that looks amazing! Which mountain is it?',
-  //         time: '1 hour ago'
-  //       },
-  //       {
-  //         id: 2,
-  //         author: 'John Smith',
-  //         avatar: '/placeholder.svg?height=32&width=32',
-  //         content: 'Great shot! The view must have been breathtaking.',
-  //         time: '30 minutes ago'
-  //       },
-  //       {
-  //         id: 3,
-  //         author: 'Alice Johnson',
-  //         avatar: '/placeholder.svg?height=32&width=32',
-  //         content: 'I wish I could visit there someday!',
-  //         time: '15 minutes ago'
-  //       },
-  //       {
-  //         id: 4,
-  //         author: 'Bob Williams',
-  //         avatar: '/placeholder.svg?height=32&width=32',
-  //         content: 'What camera did you use for this shot?',
-  //         time: '5 minutes ago'
-  //       },
-  //     ],
-  //     reposts: 23,
-  //     liked: false,
-  //     reposted: false,
-  //     upvotes: 123,
-  //     downvotes: 5,
-  //   },
-  // ]);
-
-  const fetchSpaceData = async (spaceId: number) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const data = {
-        id: spaceId,
-        name: spaceId === 1 ? "CryptoArt Enthusiasts" : spaceId === 2 ? "NFT Traders" : "Blockchain Developers",
-        description:
-          spaceId === 1
-            ? "A community for crypto art lovers and collectors"
-            : spaceId === 2
-              ? "Connect with fellow NFT traders and discuss market trends"
-              : "A space for blockchain developers to share knowledge and collaborate.",
-        image: "https://via.placeholder.com/400",
-        members: spaceId === 1 ? 1234 : spaceId === 2 ? 5678 : 9012,
-      };
-
-      // setSpace(data);
-    } catch (err) {
-      setError('Failed to fetch space data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (selectedSpaceId) {
-      fetchSpaceData(selectedSpaceId);
-    }
-  }, [selectedSpaceId]);
 
   // const handleLike = (postId: number) => {
   //   setPosts(
@@ -280,34 +272,41 @@ function PrivateSpaceContent() {
   //   setCommentingOn((current) => (current === postId ? null : postId));
   // };
 
-  if (loading) return <div>Loading space data...</div>;
-  if (error) return <div>{error}</div>;
+  if (loading) return
+  <div className="text-gray-500 text-4xl font-semibold text-center flex flex-col items-center justify-center h-[70vh]">
+    <h4>Fetching space data...</h4>
+  </div>
+
+  if (error) return
+  <div className="text-gray-500 text-4xl font-semibold text-center flex flex-col items-center justify-center h-[70vh]">
+    <h4>Error fetching space data...</h4>
+  </div>
 
   return (
     <div className="space-y-4">
       {space && (
         <>
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <img src={`https://tomato-characteristic-quail-246.mypinata.cloud/ipfs/${findSpace?.image}`} alt={findSpace?.name} className="w-10 h-10 object-cover rounded-full" />
-            {findSpace?.name} - #{channel}
+          <h2 className="flex items-center gap-3 text-xl font-bold text-gray-800">
+            <img src={`https://tomato-characteristic-quail-246.mypinata.cloud/ipfs/${findSpace?.image}`} alt={findSpace?.name} className="w-12 h-12 object-cover rounded-full shadow-lg" />
+            {findSpace?.name?.toUpperCase()} - # {channel}
           </h2>
         </>
       )}
 
       {/* Only show the post creation UI if it's the 'general' channel or the owner in announcement/governance */}
-      {(channel === 'general' || isOwner) && <CreatePost
-        socketRef={socketRef}
-        isAuthenticated={true}
-        account={account}
-        space={space}
-        privateSpaceId={privateSpaceId}
-        channel={channel}
-      />}
+      {(channel === 'general' || isOwner) && account &&
+        <CreatePost
+          socketRef={socketRef}
+          isAuthenticated={true}
+          space={space}
+          privateSpaceId={privateSpaceId}
+          channel={channel}
+        />}
 
-      {posts && posts.map((post) => (
+      {/* // {account && posts && posts.map((post) => ( */}
+      {account && posts?.length > 0 && (channel === "governance" ? updatedGovernancePosts : posts).map((post) => (
         <Post
           post={post}
-          account={account}
           socketRef={socketRef}
           key={(post as any)._id}
           isAuthenticated={true}
@@ -322,3 +321,5 @@ function PrivateSpaceContent() {
 }
 
 export default PrivateSpaceContent;
+
+

@@ -10,6 +10,10 @@ import { Socket } from "socket.io-client";
 import { useAppSelector, useAppDispatch } from '@/lib/hooks'
 import { fetchAllUsers } from '@/lib/features/FetchAllUsersSlice'
 import { CircleArrowDown } from 'lucide-react'
+import { useWallet } from '@aptos-labs/wallet-adapter-react'
+import { BlockchainOperationArg, GeneralUserThunkArg } from '@/utils/types'
+import { executeBlockchainOperation } from '@/lib/features/contractSlice'
+import { fetchAllPost } from '@/lib/features/FetchAllPostSlice'
 
 interface Comment {
     id: number
@@ -28,7 +32,6 @@ interface PostProps {
     post: any;
     socketRef: React.MutableRefObject<Socket | null>;
     isAuthenticated: boolean;
-    account: string;
     space: string;
     privateSpaceId: string | null;
     channel: string | null;
@@ -45,7 +48,8 @@ function formatTimeAgo(timestamp: number): string {
     return `${Math.floor(diffInSeconds / 2592000)} months ago`;
 }
 
-const PostComponent: React.FC<PostProps> = ({ post, isAuthenticated, socketRef, account, space, privateSpaceId, channel, repost }) => {
+const PostComponent: React.FC<PostProps> = ({ post, isAuthenticated, socketRef, space, privateSpaceId, channel, repost}) => {
+    const {account, signAndSubmitTransaction} = useWallet();
     const timeAgo = formatTimeAgo(post?.timestamp);
     const [commentingOn, setCommentingOn] = useState<number | null>(null)
     const [newComment, setNewComment] = useState('')
@@ -53,7 +57,7 @@ const PostComponent: React.FC<PostProps> = ({ post, isAuthenticated, socketRef, 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
     const dispatch = useAppDispatch()
-    const userProfile = (useAppSelector(state => state.fetchAllUser.users)).find(user => user.address === account);
+    const userProfile = (useAppSelector(state => state.fetchAllUser.users)).find(user => user.address === account?.address);
 
     const toggleComments = (postId: number) => {
         setCommentingOn(current => current === postId ? null : postId)
@@ -83,6 +87,35 @@ const PostComponent: React.FC<PostProps> = ({ post, isAuthenticated, socketRef, 
         } catch (error) {
             console.log(error);
         }
+    }
+
+    const handleVote = async (postId: string, vote: boolean) => {
+            if (!account || !account.address) {
+              console.log("No account connected or account address missing.");
+              return;
+            }
+            
+            const voteData: {proposal_id: String, vote: boolean} = {
+              proposal_id: postId,
+              vote: vote,
+            };
+        
+            const operationArg: BlockchainOperationArg = {
+              functionName: "vote_proposal",
+              typeArguments: [],
+              functionArguments: [postId, voteData.vote],
+              options: { maxGasAmount: 1000 }
+            };
+        
+            const thunkArg: GeneralUserThunkArg = {
+              data: operationArg,
+              account: account,
+              signAndSubmitTransaction: signAndSubmitTransaction,
+              functionName: "governance",
+            };
+        
+            await dispatch(executeBlockchainOperation(thunkArg));
+            dispatch(fetchAllPost({ space: space, privateSpaceId: privateSpaceId, channel: channel, userId: (userProfile as any)?._id }));
     }
 
     const handleRePost = async () => {
@@ -126,9 +159,9 @@ const PostComponent: React.FC<PostProps> = ({ post, isAuthenticated, socketRef, 
             <CardContent className="p-3">
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center">
-                        <Avatar className="h-6 w-6 mr-2">
+                        <Avatar className="h-6 w-6 mr-2 bg-[#e4e1e1] text-center">
                             <AvatarImage src={post?.createdBy?.image} alt={post?.createdBy?.image} />
-                            <AvatarFallback>{post?.createdBy?.name}</AvatarFallback>
+                            <AvatarFallback>{post?.createdBy?.name.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div>
                             <h3 className="font-semibold text-xs">{post?.createdBy?.name}</h3>
@@ -171,7 +204,7 @@ const PostComponent: React.FC<PostProps> = ({ post, isAuthenticated, socketRef, 
                 <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
                         <Button variant="ghost" size="sm" className={`text-[10px] ${post.liked ? 'text-red-500' : ''}`} onClick={handleLikePost}>
-                            <Heart className={`mr-1 h-3 w-3 ${post?.likes?.some((like: any) => like?.address === account) ? 'fill-current' : ''}`} /> {post?.likes?.length}
+                            <Heart className={`mr-1 h-3 w-3 ${post?.likes?.some((like: any) => like?.address === account?.address) ? 'fill-current' : ''}`} /> {post?.likes?.length}
                         </Button>
                         <Button variant="ghost" size="sm" className="text-[10px]" onClick={() => toggleComments(post.id)}>
                             <MessageCircle className="mr-1 h-3 w-3" /> {post.comments.length}
@@ -181,17 +214,17 @@ const PostComponent: React.FC<PostProps> = ({ post, isAuthenticated, socketRef, 
                                 <Send className="mr-1 h-3 w-3" /> {post.repost}
                             </Button>
                         }
-                        {/* {selectedChannel === 'governance' && (
+                        {channel === 'governance' && (
                             <>
-                                <Button variant="ghost" size="sm" className={`text-[10px] ${post.upvotes ? 'text-green-500' : ''}`} onClick={() => handleUpvote?.(post.id)}>
+                                <Button variant="ghost" size="sm" className={`text-[10px] ${post.upvotes ? 'text-green-500' : ''}`} onClick={() => handleVote(post.post_id, true)}>
                                     <CircleArrowDown className="mr-1 h-3 w-3" /> {post.upvotes || 0}
                                 </Button>
 
-                                <Button variant="ghost" size="sm" className={`text-[10px] ${post.downvotes ? 'text-red-500' : ''}`} onClick={() => handleDownvote?.(post.id)}>
+                                <Button variant="ghost" size="sm" className={`text-[10px] ${post.downvotes ? 'text-red-500' : ''}`} onClick={() => handleVote(post.post_id, false)}>
                                     <CircleArrowUpIcon className="mr-1 h-3 w-3" /> {post.downvotes || 0}
                                 </Button>
                             </>
-                        )} */}
+                        )}
                     </div>
                 </div>
 

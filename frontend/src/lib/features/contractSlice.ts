@@ -1,7 +1,7 @@
 import { createAsyncThunk, PayloadAction, SerializedError, createSlice } from '@reduxjs/toolkit';
 import { UserState, RegisterUserPayload, RegisterUserThunkArg, GeneralUserThunkArg } from '@/utils/types';
 import { InputTransactionData } from '@aptos-labs/wallet-adapter-react';
-import { aptosClient, DEVNET_CLIENT, DEVNET_CONFIG } from '@/utils';
+import { aptosClient, DEVNET_CLIENT, DEVNET_CONFIG, TESTNET_CLIENT } from '@/utils';
 import { NetworkInfo } from '@aptos-labs/wallet-standard';
 import { InputViewFunctionData, MoveValue } from '@aptos-labs/ts-sdk';
 
@@ -18,21 +18,22 @@ const executeBlockchainOperation = createAsyncThunk(
     arg: GeneralUserThunkArg,
     { rejectWithValue }
   ) => {
-    const { data, account, signAndSubmitTransaction } = arg;
+    try {
+    const { data, account, signAndSubmitTransaction, functionName } = arg;
     console.log("Account:", account);
     if (!account) return rejectWithValue("Wallet not connected");
 
     const transaction: InputTransactionData = {
       data: {
-        // function: `0x4bd606f80f5a812abfd7d8311098c435ff2a1d7de8531f8abb8240856e2f74a2::NewUserRegistry::${data.functionName}`,
-        function: `0x4bd606f80f5a812abfd7d8311098c435ff2a1d7de8531f8abb8240856e2f74a2::governance::${data.functionName}`,
+        // function: `0x5f41de03d95a6508a8fcc2b3e5fd6f4de75db12ccbd0f3a3a3a79a176433f03d::NewUserRegistry::${data.functionName}`,
+        function: `0x66882b8bf7f4c93a76120f77438b16cba049fe8b2e9946ca50821d70a6ee1453::${functionName}::${data.functionName}`,
         typeArguments: data.typeArguments,
         functionArguments: data.functionArguments
       },
       options: data.options
     };
 
-    try {
+
       const response = await signAndSubmitTransaction(transaction);
       console.log("Transaction Response:", response);
       return response;
@@ -45,19 +46,19 @@ const executeBlockchainOperation = createAsyncThunk(
 
 const fetchProposalsThunk = createAsyncThunk(
   'user/fetchProposals',
-  async (_, { rejectWithValue }) => {
+  async (arg: { address: string }, { rejectWithValue }) => {
     try {
+      const { address } = arg;
       const viewPayload: InputViewFunctionData = {
-        function: '0x4bd606f80f5a812abfd7d8311098c435ff2a1d7de8531f8abb8240856e2f74a2::governance::get_proposals',
+        function: '0x66882b8bf7f4c93a76120f77438b16cba049fe8b2e9946ca50821d70a6ee1453::governance::get_proposals',
         typeArguments: [],
-        functionArguments: [],
+        functionArguments: [address],
       };
 
-      const result: Array<MoveValue> = await DEVNET_CLIENT.view({
+      const result: Array<MoveValue> = await TESTNET_CLIENT.view({
         payload: viewPayload,
       });
 
-      console.log(result)
       return result;
     }
     catch (error: any) {
@@ -79,13 +80,13 @@ const fetchUserProfileThunk = createAsyncThunk(
     try {
       // Create the payload for the view function
       const viewPayload: InputViewFunctionData = {
-        function: '0x4bd606f80f5a812abfd7d8311098c435ff2a1d7de8531f8abb8240856e2f74a2::NewUserRegistry::view_profile',
+        function: '0x66882b8bf7f4c93a76120f77438b16cba049fe8b2e9946ca50821d70a6ee1453::NewUserRegistry::view_profile',
         typeArguments: [],
         functionArguments: [userAddress],  // Pass the user address as an argument
       };
 
       // Call the view function
-      const result: Array<MoveValue> = await DEVNET_CLIENT.view({
+      const result: Array<MoveValue> = await TESTNET_CLIENT.view({
         payload: viewPayload,
       });
 
@@ -162,10 +163,6 @@ const fetchUserProfileThunk = createAsyncThunk(
 //     }
 //   }
 // );
-
-
-
-
 
 const userSlice = createSlice({
   name: 'user',

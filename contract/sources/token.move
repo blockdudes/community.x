@@ -18,10 +18,6 @@ module myaddr::fungible {
         burn_ref: BurnRef
     }
 
-    /// Private module initialization (can only take signer parameters)
-    fun init_module(admin: &signer) {
-        // The module's internal setup logic, if any
-    }
 
     /// Public function to create a new token with dynamic parameters.
     public entry fun create_token(
@@ -32,8 +28,6 @@ module myaddr::fungible {
         icon: vector<u8>,  // URL for the token's icon
         project_url: vector<u8>  // URL for the token's project or documentation
     ) {
-        // Call the private init_module function to ensure any module-specific setup is done
-        init_module(admin);
 
         let constructor_ref = &object::create_named_object(admin, symbol);
         
@@ -53,6 +47,7 @@ module myaddr::fungible {
             icon_str,        /* Token icon URL */
             project_url_str  /* Project URL */
         );
+        
 
         // Create mint/burn/transfer refs to allow the creator to manage the fungible asset.
         let mint_ref = fungible_asset::generate_mint_ref(constructor_ref);
@@ -68,17 +63,17 @@ module myaddr::fungible {
     }
 
     #[view]
-    /// Return the address of the managed fungible asset that's created when this module is deployed.
-    public fun get_metadata(admin_address: address, symbol: vector<u8>): Object<Metadata> {
-        let asset_address = object::create_object_address(&admin_address, symbol);
+    public fun get_metadata(issuer: address, symbol: vector<u8>): Object<Metadata> {
+        let asset_address = object::create_object_address(&issuer, symbol);
         object::address_to_object<Metadata>(asset_address)
     }
 
     #[view]
-    public fun balance(owner: address, symbol: vector<u8>): u64 {
-        let asset = get_metadata(@myaddr, symbol);
+    public fun balance(owner: address, issuer: address, symbol: vector<u8>): u64 {
+        let asset = get_metadata(issuer, symbol);
         fungible_asset::balance(primary_fungible_store::primary_store(owner, asset))
     }
+
 
     public entry fun mint_p(user: &signer, admin: &signer, symbol: vector<u8>, amount: u64) acquires ManagedFungibleAsset {
         mint(admin, signer::address_of(user), symbol, amount);

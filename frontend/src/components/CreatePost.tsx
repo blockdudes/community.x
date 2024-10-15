@@ -10,11 +10,17 @@ import { Socket } from "socket.io-client";
 import { useAppSelector, useAppDispatch } from "@/lib/hooks";
 import { fetchAllUsers } from "@/lib/features/FetchAllUsersSlice";
 import { usePathname } from "next/navigation";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { BlockchainOperationArg, GeneralUserThunkArg } from "@/utils/types";
+import { executeBlockchainOperation } from "@/lib/features/contractSlice";
+import { uuid } from 'uuidv4';
+import toast from "react-hot-toast";
+import { Loader2 } from "lucide-react"
+
 
 interface CreatePostProps {
   socketRef: React.MutableRefObject<Socket | null>;
   isAuthenticated: boolean;
-  account: string;
   space: string;
   privateSpaceId: string | null;
   channel: string | null;
@@ -29,14 +35,11 @@ interface PostData {
 }
 
 
-const CreatePost: React.FC<CreatePostProps> = ({ isAuthenticated, socketRef, account, space, privateSpaceId, channel }) => {
-  // // const path = usePathname();
-  // const path = "/home";
-  // // console.log(path);
-
+const CreatePost: React.FC<CreatePostProps> = ({ isAuthenticated, socketRef, space, privateSpaceId, channel }) => {
+  const { account, signAndSubmitTransaction } = useWallet()
   const dispatch = useAppDispatch();
-  const userProfile = (useAppSelector(state => state.fetchAllUser.users)).find(user => user.address === account);
-  // console.log("comp: ", userProfile);
+  const userProfile = (useAppSelector(state => state.fetchAllUser.users)).find(user => user.address === account?.address);
+  const [createPostLoading, setCreatePostLoading] = useState(false)
 
   const [newPost, setNewPost] = useState<PostData>({
     resources: [],
@@ -96,41 +99,86 @@ const CreatePost: React.FC<CreatePostProps> = ({ isAuthenticated, socketRef, acc
 
 
   const handleCreatePost = async () => {
-    if (isAuthenticated && socketRef.current) {
-      if (newPost) {
-        try {
-          const uploadPromises = selectedFiles.map(file => uploadFileToPinata(file));
-          const responses = await Promise.all(uploadPromises);
-          const updatedResources = responses.map((response, index) => ({
-            resourceUrl: response.IpfsHash,
-            dataType: newPost.resources[index].dataType
-          }));
-          const finalPost = {
-            ...newPost,
-            resources: updatedResources
-          };
-          const postData = {
-            title: "POST",
-            description: finalPost.message,
-            post: JSON.stringify(finalPost.resources),
-            createdBy: (userProfile as any)?._id,
-            space: space,
-            privateSpaceId: privateSpaceId,
-            channel: channel
-          };
-          socketRef.current.emit("create_post", postData);
-          setNewPost({
-            resources: [],
-            message: '',
-          });
-          setSelectedFiles([]);
-          setFilePreviews([]);
-        } catch (error) {
-          console.error("File upload failed:", error);
-        }
+    try {
+      setCreatePostLoading(true)
+      const id = uuid();
+      const post_id = id.split("-")[0];
+      if (newPost.message === "" ) {
+        toast.error("Please enter a post correctly");
+        return;
       }
-    } else {
-      console.log("register yourself!");
+      if (channel === "governance") {
+        if (!account || !account.address) {
+          console.log("No account connected or account address missing.");
+          return;
+        }
+        if (newPost) {
+          const postData = { ...newPost, proposal_id: post_id }
+  
+          console.log(postData)
+  
+          const operationArg: BlockchainOperationArg = {
+            functionName: "create_proposal",
+            typeArguments: [],
+            functionArguments: [postData.proposal_id, postData.message, postData.resources[0].resourceUrl || "", postData.resources[0].dataType || ""],
+            options: { maxGasAmount: 1000 }
+          };
+  
+          const thunkArg: GeneralUserThunkArg = {
+            data: operationArg,
+            account: account,
+            signAndSubmitTransaction: signAndSubmitTransaction,
+            functionName: "governance",
+          };
+  
+          dispatch(executeBlockchainOperation(thunkArg));
+        }
+  
+      }
+  
+      if (isAuthenticated && socketRef.current) {
+        if (newPost) {
+          try {
+            const uploadPromises = selectedFiles.map(file => uploadFileToPinata(file));
+            const responses = await Promise.all(uploadPromises);
+            const updatedResources = responses.map((response, index) => ({
+              resourceUrl: response.IpfsHash,
+              dataType: newPost.resources[index].dataType
+            }));
+            const finalPost = {
+              ...newPost,
+              resources: updatedResources
+            };
+            const postData = {
+              post_id: post_id,
+              title: "title",
+              description: finalPost.message,
+              post: JSON.stringify(finalPost.resources),
+              createdBy: (userProfile as any)?._id,
+              space: space,
+              privateSpaceId: privateSpaceId,
+              channel: channel
+            };
+            const data = socketRef.current.emit("create_post", postData);
+            console.log('create_post', data)
+            setNewPost({
+              resources: [],
+              message: '',
+            });
+            setSelectedFiles([]);
+            setFilePreviews([]);
+          } catch (error) {
+            toast.error("File upload failed");
+          }
+        }
+        toast.success("Post created successfully");
+      } else {
+        toast.error("Register yourself!");
+      }
+    } catch (error) {
+      toast.error("Failed to create post");
+    } finally {
+      setCreatePostLoading(false)
     }
   };
 
@@ -192,8 +240,8 @@ const CreatePost: React.FC<CreatePostProps> = ({ isAuthenticated, socketRef, acc
                 </label>
               </Button>
             </div>
-            <Button size="sm" className="text-xs" onClick={handleCreatePost}>
-              <Send className="mr-1 h-4 w-4" /> Post
+            <Button size="sm" className="text-xs" onClick={handleCreatePost} disabled={!isAuthenticated || !account || !account.address } >
+              {createPostLoading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <>  <Send className="mr-1 h-4 w-4" /> Post</>}
             </Button>
           </div>
           <div className="flex gap-4">

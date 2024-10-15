@@ -11,23 +11,30 @@ import { AlertCircle, Upload, User } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { WalletSelector } from './WalletSelector'
 import { useWallet } from '@aptos-labs/wallet-adapter-react'
+import { uploadFileToPinata } from '@/utils/pinnata'
+import { BlockchainOperationArg, GeneralUserThunkArg, RegisterUserPayload } from '@/utils/types'
+import { executeBlockchainOperation } from '@/lib/features/contractSlice'
+import { useAppDispatch } from '@/lib/hooks'
+import axios from 'axios'
 
 export default function RegisterPage() {
   const router = useRouter()
   const { connected } = useWallet();
-  
-  if(!connected) {
+
+  if (!connected) {
     router.push('/');
   }
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState({
+    name: '',
     username: '',
     description: '',
-    user_address: ''
   })
   const [profileImage, setProfileImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const dispatch = useAppDispatch()
+  const { account, signAndSubmitTransaction, network } = useWallet();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -53,17 +60,55 @@ export default function RegisterPage() {
     e.preventDefault()
     setError(null)
 
-    if (!formData.username || !formData.user_address) {
+    if (!formData.username || !formData.description) {
       setError('Username and User Address are required fields.')
       return
     }
 
-
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const uploadPromises = profileImage && await uploadFileToPinata(profileImage)
 
-      router.push('/dashboard')
+      if (!formData.username || !formData.description) {
+        setError('Username and User Address are required fields.')
+        return
+      }
+      const userData: RegisterUserPayload = {
+        username: formData.username,
+        profilePicture: uploadPromises?.IpfsHash || "",
+        description: formData.description
+      };
+
+      const operationArg: BlockchainOperationArg = {
+        functionName: "register_user",
+        typeArguments: [],
+        functionArguments: [userData.username, uploadPromises?.IpfsHash, userData.description],
+        options: { maxGasAmount: 1000 }
+      };
+
+      const thunkArg: GeneralUserThunkArg = {
+        data: operationArg,
+        account: account,
+        signAndSubmitTransaction: signAndSubmitTransaction,
+        functionName: "NewUserRegistry"
+      };
+
+      const result = await dispatch(executeBlockchainOperation(thunkArg));
+
+      if (executeBlockchainOperation.fulfilled.match(result)) {
+        await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/register`, {
+          name: formData.name,
+          username: formData.username,
+          description: formData.description,
+          image: uploadPromises?.IpfsHash,
+          address: account?.address,
+        });
+
+        router.push('/home');
+      } else {
+        throw new Error('Blockchain operation failed');
+      }
     } catch (err) {
+      console.log(err)
       setError('An error occurred while registering. Please try again.')
     }
     router.push('/')
@@ -112,6 +157,17 @@ export default function RegisterPage() {
                 </div>
               </div>
               <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  placeholder="Enter your name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
                 <Input
                   id="username"
@@ -132,17 +188,6 @@ export default function RegisterPage() {
                   onChange={handleInputChange}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="user_address">User Address</Label>
-                <Input
-                  id="user_address"
-                  name="user_address"
-                  placeholder="Enter your blockchain address"
-                  value={formData.user_address}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
             </div>
             {error && (
               <Alert variant="destructive" className="mt-4">
@@ -157,8 +202,8 @@ export default function RegisterPage() {
         <CardFooter className="flex justify-center">
           <p className="text-sm text-gray-500">
             Already have an account?{' '}
-            <Button variant="link" className="p-0" onClick={() => router.push('/login')}>
-              Log in
+            <Button variant="link" className="p-0" onClick={() => router.push('/')}>
+              reload
             </Button>
           </p>
         </CardFooter>

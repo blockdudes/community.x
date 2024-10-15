@@ -1,6 +1,7 @@
+'use client'
 import React from 'react'
 import Image from "next/image";
-import { WalletSelector as ShadcnWalletSelector} from './WalletSelector';
+import { WalletSelector as ShadcnWalletSelector} from '../../components/WalletSelector';
 import { useAppDispatch } from "@/lib/hooks";
 import { executeBlockchainOperation, fetchProposalsThunk, fetchUserProfileThunk } from "@/lib/features/contractSlice";
 import { BlockchainOperationArg, GeneralUserThunkArg, RegisterUserPayload, RegisterUserThunkArg, UpdateUserPayload } from "@/utils/types";
@@ -19,10 +20,10 @@ const Method = () => {
       }
   
       const userAddress = account?.address; 
-      const networkInfo = { chainId: 1, name: "devnet" as Network }; 
+      const networkInfo = { chainId: 1, name: "testnet" as Network }; 
       // Dispatch the fetchUserProfileThunk to load the user profile
       // dispatch(fetchUserProfileThunk({ userAddress, network: networkInfo })); // Use networkInfo object
-      dispatch(fetchProposalsThunk());
+      dispatch(fetchProposalsThunk({ address: userAddress }));
     }, [dispatch, account]);
   
   
@@ -48,6 +49,7 @@ const Method = () => {
         data: operationArg,
         account: account,
         signAndSubmitTransaction: signAndSubmitTransaction,
+        functionName: "user"
       };
   
       dispatch(executeBlockchainOperation(thunkArg));
@@ -61,8 +63,8 @@ const Method = () => {
       }
     
       const userData: RegisterUserPayload = {
-        username: "test2",
-        profilePicture: "test12",
+        username: "test232",
+        profilePicture: "test2312",
         description: "test12"
       };
     
@@ -77,6 +79,7 @@ const Method = () => {
         data: operationArg,
         account: account,
         signAndSubmitTransaction: signAndSubmitTransaction,
+        functionName: "user"
       };
     
       dispatch(executeBlockchainOperation(thunkArg));
@@ -104,6 +107,7 @@ const Method = () => {
         data: operationArg,
         account: account,
         signAndSubmitTransaction: signAndSubmitTransaction,
+        functionName: "governance"
       };
   
       dispatch(executeBlockchainOperation(thunkArg));
@@ -131,13 +135,35 @@ const Method = () => {
         data: operationArg,
         account: account,
         signAndSubmitTransaction: signAndSubmitTransaction,
+        functionName: "governance"
       };
   
       dispatch(executeBlockchainOperation(thunkArg));
   
     }
   
+    const handleInitialize = () => {
+      if (!account || !account.address) {
+        console.log("No account connected or account address missing.");
+        return;
+      }   
+    
+      const operationArg: BlockchainOperationArg = {
+        functionName: "admin_init_module",
+        typeArguments: [],
+        functionArguments: [],
+        options: { maxGasAmount: 1000 }
+      };
 
+      const thunkArg: GeneralUserThunkArg = {
+        data: operationArg,
+        account: account,
+        signAndSubmitTransaction: signAndSubmitTransaction,
+        functionName: "governance"
+      };
+
+      dispatch(executeBlockchainOperation(thunkArg));
+    }
     
     return (
         <div className="h-screen w-full">
@@ -145,6 +171,7 @@ const Method = () => {
                 <ShadcnWalletSelector />
                 <button onClick={handleRegister}>Register</button>
                 <button onClick={handleUpdate}>update_profile</button>
+                <button onClick={handleInitialize}>initialize</button>
                 <button onClick={handleCreateProposal}>create_proposal</button>
                 <button onClick={handleVoteProposal}>vote_proposal</button>
             </div>

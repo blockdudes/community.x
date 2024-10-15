@@ -1,11 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { Network, useWallet } from '@aptos-labs/wallet-adapter-react';
 import { useRouter } from 'next/navigation';
 import { WalletSelector } from '@/components/WalletSelector';
 import { BarsComponent } from '@/components/BarsComponent';
 import { VortexComponent } from '@/components/ui/VortexComponent';
+import axios from 'axios';
+import { fetchUserProfileThunk } from '@/lib/features/contractSlice';
+import { useAppDispatch } from '@/lib/hooks';
+import { Toaster } from 'react-hot-toast';
+
 
 const LandingPage = () => {
   return (
@@ -17,26 +22,36 @@ const LandingPage = () => {
 
 export default function Home() {
   const { account, connected } = useWallet();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!connected);
   const router = useRouter();
+  const dispatch = useAppDispatch();
 
-  const checkIfRegistered = async (address: string) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const isRegistered = localStorage.getItem(`isRegistered-${address}`) === 'true';
-        resolve(isRegistered);
-      }, 2000);
-    });
-  };
+  console.log('state',connected)
+
+  const checkIfRegistered = async (address: string): Promise<any> => {
+    try {
+      const userAddress = account?.address;
+      const isAuth = (await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/${userAddress}`))?.data?.isAuth;
+      const networkInfo = { chainId: 1, name: "testnet" as Network };
+      const response = await dispatch(fetchUserProfileThunk({ userAddress: userAddress || "", network: networkInfo }));
+      console.log(response.meta.requestStatus === "fulfilled", isAuth)
+      if (response.meta.requestStatus === "fulfilled" && isAuth) {
+        return true
+      } else {
+        return false
+      }
+    } catch (error) {
+      return false
+    }
+  }
 
   useEffect(() => {
     const handleWalletConnection = async () => {
       if (connected && account?.address) {
         setLoading(true);
-
         const isRegistered = await checkIfRegistered(account.address);
-
-        if (true) {
+        console.log(isRegistered)
+        if (isRegistered) {
           router.push('/home');
         } else {
           router.push('/register');
@@ -47,7 +62,7 @@ export default function Home() {
     };
 
     handleWalletConnection();
-  }, [connected, account, router]);
+  }, [connected, account, router, account]);
 
   if (loading) {
     return (

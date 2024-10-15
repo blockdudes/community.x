@@ -7,6 +7,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { WalletSelector as ShadcnWalletSelector } from "./WalletSelector";
 import { useAppSelector } from '@/lib/hooks';
 import { useParams } from 'next/navigation';
+import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import axios from 'axios';
 
 interface OpenSpaces {
   [key: number]: boolean;
@@ -31,12 +33,28 @@ export function DesktopSidebar() {
 }
 
 
+
 export function SidebarContent() {
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [isPrivateSpacesOpen, setIsPrivateSpacesOpen] = useState(false);
   const router = useRouter();
-  const account = "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6";
+  const { account } = useWallet();
+
+  useEffect(() => {
+    if (account?.address) {
+      fetchUser();
+    }
+  }, [account?.address]);
+
+  const fetchUser = async () => {
+    try {
+      const userResponse = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/${account?.address}`);
+      setUser(userResponse?.data?.user);
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   const getSelectedSpaceAndChannel = () => {
     const pathSegments = pathname.split('/');
@@ -61,19 +79,12 @@ export function SidebarContent() {
   const filteredPrivateSpaces = privateSpaces?.filter((space) => {
     if (Array.isArray(space.members)) {
       return space.members.some((member: any) =>
-        member.address === account
+        member.address === account?.address
       );
     }
     return false;
   });
-  // console.log(privateSpace);
-
-
-  // const privateSpaces = [
-  //   { id: 1, name: "Crypto Punks", description: "Discuss and trade CryptoPunks NFTs" },
-  //   { id: 2, name: "Bored Ape Yacht Club", description: "BAYC enthusiasts and collectors" },
-  //   { id: 3, name: "Art Blocks", description: "Generative art NFT community" },
-  // ];
+ 
 
   const toggleSpace = (spaceId: number) => {
     setOpenSpaces((prev) => ({ ...prev, [spaceId]: !prev[spaceId] }));
@@ -92,11 +103,11 @@ export function SidebarContent() {
       <div className="flex items-center my-4">
         <Avatar className="h-8 w-8 mr-2">
           <AvatarImage src={user?.avatar || "/placeholder.svg?height=32&width=32"} alt="Profile" />
-          <AvatarFallback>{user?.name?.slice(0, 2) || "AN"}</AvatarFallback>
+          <AvatarFallback>{user?.name?.slice(0, 2).toUpperCase() || "U"}</AvatarFallback>
         </Avatar>
         <div>
-          <h2 className="font-semibold text-sm">{user?.name || "Anonymous"}</h2>
-          <p className="text-xs text-gray-500">@{user?.username || "anonymous"}</p>
+          <h2 className="font-semibold text-sm">{((user?.name) as string)?.charAt(0).toUpperCase() + ((user?.name) as string)?.slice(1) || "..."}</h2>
+          <p className="text-xs text-gray-500">@{user?.username || "..."}</p>
         </div>
       </div>
       <nav className="space-y-2 hover:none">
@@ -150,7 +161,7 @@ export function SidebarContent() {
                       className={`w-full justify-start text-xs pl-10 ${selectedSpaceId === space._id && selectedChannel === channel ? 'bg-black text-white bg-opacity-80' : ''}`}
                       onClick={() => router.push(`/private/${space._id}/${channel}`)}
                     >
-                      #{channel}
+                      # {channel}
                     </Button>
                   ))}
                 </CollapsibleContent>

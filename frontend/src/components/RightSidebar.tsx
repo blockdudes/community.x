@@ -13,25 +13,24 @@ import { Button } from "@/components/ui/button"
 import { Users, Plus, TrendingUp } from 'lucide-react'
 
 function RightSidebar() {
-  // const address = (useWallet()).account?.address;
-  const account = "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6";
+  const {account} = useWallet();
 
   const socketRef = useRef<Socket | null>(null);
   const dispatch = useAppDispatch();
   const privateSpaces = (useAppSelector(state => state.fetchPrivateSpace)).privateSpace;
   const users = useAppSelector(state => state.fetchAllUser.users);
-  const userProfile = users.find(user => user.address === account);
+  const userProfile = users.find(user => user.address === account?.address);
 
   const unfollowedUsers = (users.filter((item: any) =>
-    item.address !== account &&
-    !item.followers.some((follower: any) => follower.address === account)
+    item.address !== account?.address &&
+    !item.followers.some((follower: any) => follower.address === account?.address)
   )).slice(-5);
 
 
   const filteredPrivateSpaces = (privateSpaces?.filter((space) => {
     if (Array.isArray(space.members)) {
       return space.members.every((member: any) =>
-        member.address !== account
+        member.address !== account?.address
       );
     }
     return false;
@@ -94,58 +93,72 @@ function RightSidebar() {
   }
 
   return (
-    <div className="space-y-10 text-gray-600 p-4">
+    <div className="space-y-10 text-gray-600 p-4 min-w-[250px]">
       <section>
         <h2 className="text-sm font-bold mb-3 flex items-center text-gray-600">
           <Users className="w-4 h-4 mr-2" />
           New Spaces
         </h2>
         <div className="space-y-3">
-          {filteredPrivateSpaces?.map((space: privateSpaceType, index) => (
-            <div key={index} className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Avatar className="h-8 w-8 mr-2">
-                  <AvatarImage src={`/placeholder.svg?height=32&width=32&text=${space?.name[0]}`} alt={space?.name} />
-                  <AvatarFallback>{space.name[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-xs font-semibold text-gray-600">{space.name}</p>
-                  <p className="text-[10px] text-gray-400">{(space.members as any)?.length} members</p>
+          {filteredPrivateSpaces && filteredPrivateSpaces.length > 0 ? (
+            filteredPrivateSpaces.map((space: privateSpaceType, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Avatar className="h-8 w-8 mr-2">
+                    <AvatarImage src={`/placeholder.svg?height=32&width=32&text=${space?.name[0]}`} alt={space?.name} />
+                    <AvatarFallback>{space.name[0]}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600">{space.name}</p>
+                    <p className="text-[10px] text-gray-400">{(space.members as any)?.length} members</p>
+                  </div>
                 </div>
+                <Button onClick={() => joinPrivateSpace(space)} size="sm" variant="outline" className="text-[10px] h-6 text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors">
+                  <Plus className="w-3 h-3 mr-1" />
+                  Join
+                </Button>
               </div>
-              <Button onClick={() => joinPrivateSpace(space)} size="sm" variant="outline" className="text-[10px] h-6 text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors">
-                <Plus className="w-3 h-3 mr-1" />
-                Join
-              </Button>
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center my-8">
+              <p className="text-gray-500 text-sm">You are up to date, </p>
+              <p className="text-gray-500 text-sm">no new spaces.</p>
             </div>
-          ))}
+          )}
         </div>
       </section>
 
       <section>
         <h2 className="text-sm font-bold mb-3 text-gray-600">Suggestions</h2>
         <div className="space-y-3">
-          {unfollowedUsers.map((user, index) => {
-            const data = {
-              userId: (userProfile as any)._id,
-              followUserId: user._id
-            }
-            return (
-              <div key={index} className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Avatar className="h-8 w-8 mr-2">
-                    <AvatarImage src={`/placeholder.svg?height=32&width=32&text=${user?.name[0]}`} alt={user?.name} />
-                    <AvatarFallback>{user?.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-600">{user?.name}</p>
-                    <p className="text-[10px] text-gray-400">@{user?.username.toLowerCase().replace(' ', '')}</p>
+          {unfollowedUsers.length > 0 ? (
+            unfollowedUsers.map((user, index) => {
+              const data = {
+                userId: (userProfile as any)?._id,
+                followUserId: user._id
+              }
+              return (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Avatar className="h-8 w-8 mr-2">
+                      <AvatarImage src={`/placeholder.svg?height=32&width=32&text=${user?.name[0]}`} alt={user?.name} />
+                      <AvatarFallback>{user?.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-600">{user?.name}</p>
+                      <p className="text-[10px] text-gray-400">@{user?.username.toLowerCase().replace(' ', '')}</p>
+                    </div>
                   </div>
+                  <Button onClick={() => handleFollow(data)} size="sm" variant="outline" className="text-[10px] h-6 text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors">Follow</Button>
                 </div>
-                <Button onClick={() => handleFollow(data)} size="sm" variant="outline" className="text-[10px] h-6 text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors">Follow</Button>
-              </div>
-            )
-          })}
+              )
+            })
+          ) : (
+            <div className="flex flex-col items-center justify-center my-8">
+              <p className="text-gray-500 text-sm">You are up to date, </p>
+              <p className="text-gray-500 text-sm">no new suggestions.</p>
+            </div>
+          )}
         </div>
       </section>
 

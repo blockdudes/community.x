@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import axios from 'axios'
 import { io, Socket } from 'socket.io-client'
+import { useWallet } from '@aptos-labs/wallet-adapter-react'
+import toast from 'react-hot-toast'
+import { Loader2 } from 'lucide-react'
 
 interface FollowUserBody {
   userId: string;
@@ -16,8 +19,10 @@ function ProfileContent() {
   const [users, setUsers] = useState<any[]>();
   const [searchInput, setSearchInput] = useState('');
   const [searchResults, setSearchResults] = useState<string[]>([]);
-  const account = "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6";
+  const { account } = useWallet();
   const socketRef = useRef<Socket | null>(null);
+  const [followUserLoading, setFollowUserLoading] = useState(false);
+  const [unfollowUserLoading, setUnfollowUserLoading] = useState(false);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.trim();
@@ -69,7 +74,7 @@ function ProfileContent() {
 
   const fetchUser = async () => {
     try {
-      const userResponse = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/${account}`);
+      const userResponse = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/${account?.address}`);
       console.log("aaya");
       setUser(userResponse?.data?.user);
     } catch (error) {
@@ -79,21 +84,27 @@ function ProfileContent() {
 
   const handleFollowUser = async (data: FollowUserBody) => {
     try {
+      setFollowUserLoading(true)
       if (account && socketRef.current) {
         socketRef.current.emit("follow_user", data);
         socketRef.current.on("public_user", data => {
-          console.log("CALLED")
           fetchUser();
           fetchAllUsers();
+          setSearchInput('')
+          setSearchResults([])
         })
       }
+      toast.success("Successfully followed user");
     } catch (error) {
-      console.log(error);
+      toast.error("Failed to follow user");
+    } finally {
+      setFollowUserLoading(false)
     }
   }
 
   const handleUnFollowUser = async (data: FollowUserBody) => {
     try {
+      setUnfollowUserLoading(true)
       if (account && socketRef.current) {
         socketRef.current.emit("unfollow_user", data);
         socketRef.current.on("public_user", data => {
@@ -101,9 +112,12 @@ function ProfileContent() {
           fetchUser();
           fetchAllUsers();
         })
+        toast.success("Successfully unfollowed user");
       }
     } catch (error) {
-      console.log(error);
+      toast.error("Failed to unfollow user");
+    } finally {
+      setUnfollowUserLoading(false)
     }
   }
 
@@ -117,7 +131,7 @@ function ProfileContent() {
           <div className="flex items-center space-x-4 mb-4">
             <Avatar className="h-16 w-16">
               <AvatarImage src="/placeholder.svg?height=64&width=64" alt="Your Profile" />
-              <AvatarFallback>{user?.name?.split(' ').map((word: any) => word[0]).join('')}</AvatarFallback>
+              <AvatarFallback>{user?.name?.split(' ').map((word: any) => word[0]).join('').toUpperCase()}</AvatarFallback>
             </Avatar>
             <div>
               <h2 className="text-lg font-semibold">{user?.name}</h2>
@@ -140,7 +154,9 @@ function ProfileContent() {
                     </Avatar>
                     <p className="text-sm">{followingUser?.name}</p>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => handleUnFollowUser(data)}>Unfollow</Button>
+                  <Button variant="outline" size="sm" onClick={() => handleUnFollowUser(data)} disabled={unfollowUserLoading}>
+                    {unfollowUserLoading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : "Unfollow"}
+                  </Button>
                 </div>
               )
             })}
@@ -171,7 +187,9 @@ function ProfileContent() {
                         </Avatar>
                         <p className="text-sm">{followUser?.name}</p>
                       </div>
-                      <Button className="bg-blue-500 text-white" size="sm" onClick={() => handleFollowUser(data)}>Follow</Button>
+                      <Button className="bg-blue-500 text-white" size="sm" onClick={() => handleFollowUser(data)} disabled={followUserLoading}>
+                        {followUserLoading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : "Follow"}
+                      </Button>
                     </div>
                   )
                 })}

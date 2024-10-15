@@ -16,8 +16,7 @@ export default function FeedContent() {
   // const path = usePathname();
   const path = "/home";
 
-  // const address = (useWallet()).account?.address;
-  const account = "0xd9eb5cfed425152a47a35dcfc43d0acbfb865feba0fc54f20fc6f40903c467d6";
+  const {account, connected} = useWallet();
 
   const dispatch = useAppDispatch();
   const socketRef = useRef<Socket | null>(null);
@@ -25,10 +24,9 @@ export default function FeedContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [users, setUsers] = useState([]);
   const posts = useAppSelector(state => state.fetchAllPost.posts);
-  const userProfile = (useAppSelector(state => state.fetchAllUser.users)).find(user => user.address === account);
+  const userProfile = (useAppSelector(state => state.fetchAllUser.users)).find(user => user.address === account?.address);
   const { space, privateSpaceId, channel } = parsePathForPostData(path);
 
-  console.log(posts);
 
   useEffect(() => {
     dispatch(fetchAllUsers())
@@ -69,7 +67,7 @@ export default function FeedContent() {
 
   const checkAuthStatus = async () => {
     try {
-      const isAuth = (await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/${account}`))?.data?.isAuth;
+      const isAuth = (await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/user/get/${account?.address}`))?.data?.isAuth;
       if (!isAuth) {
         router.push('/register');
       } else {
@@ -85,15 +83,13 @@ export default function FeedContent() {
       <CreatePost
         socketRef={socketRef}
         isAuthenticated={isAuthenticated}
-        account={account}
         space={space}
         privateSpaceId={privateSpaceId}
         channel={channel}
       />
-      {posts && posts.map(post => (
+      {account && posts && posts.map(post => (
         <Post
           post={post}
-          account={account}
           socketRef={socketRef}
           key={(post as any)._id}
           isAuthenticated={isAuthenticated}

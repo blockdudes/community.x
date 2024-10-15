@@ -4,7 +4,7 @@ import "./globals.css";
 import StoreProvider from "@/lib/StoreProvider";
 import { WalletProvider } from "@/components/WalletProvider";
 import { AutoConnectProvider } from "@/components/AutoConnectProvider";
-import Method from "@/components/Method";
+import { Toaster } from "react-hot-toast";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -34,6 +34,10 @@ export default function RootLayout({
       >
         <AutoConnectProvider>
           <WalletProvider>
+            <Toaster
+              position="top-center"
+              reverseOrder={false}
+            />
             <StoreProvider>
               {children}
             </StoreProvider>

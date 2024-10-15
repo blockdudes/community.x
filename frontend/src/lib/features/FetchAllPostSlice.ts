@@ -1,6 +1,7 @@
 "use client"
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import { fetchProposalsThunk } from "./contractSlice";
 
 type Comment = {
     user: Object;
@@ -31,6 +32,16 @@ const intialPostState: intialPostStateType = {
     error: null,
     loading: false
 }
+
+// useEffect(() => {
+//     const fetchGovernanceProposals = async () => {
+//       if (channel === 'governance') {
+//       }
+//     };
+//     fetchGovernanceProposals();
+//   }, [selectedSpaceId, selectedChannel, account]);
+
+
 
 export const fetchAllPost = createAsyncThunk<
     { posts: Post[] },
@@ -63,6 +74,7 @@ export const fetchAllPost = createAsyncThunk<
         followingPost.sort((a, b) => b.timestamp - a.timestamp);
         const allPost = [...unFollowingPost.slice(0, 60), ...followingPost.slice(0, 40)]
         allPost.sort((a, b) => b.timestamp - a.timestamp);
+        console.log(allPost, )
         return { posts: allPost }
     } catch (error) {
         return rejectWithValue(error as string);

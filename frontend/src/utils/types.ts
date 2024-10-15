@@ -38,5 +38,5 @@ export interface GeneralUserThunkArg {
   data: BlockchainOperationArg;
   account: any;
   signAndSubmitTransaction: (transaction: InputTransactionData) => Promise<any>;
-  
+  functionName: string;
 }

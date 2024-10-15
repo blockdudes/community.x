@@ -9,6 +9,7 @@ export interface UserRegisterBody {
 }
 
 export interface PostCreateBody {
+    post_id: string;
     title: string;
     description: string;
     post: string;
@@ -61,6 +62,7 @@ export interface Private extends Document {
 }
 
 export interface Post extends Document {
+    post_id: string;
     post: string;
     title: string;
     description: string;

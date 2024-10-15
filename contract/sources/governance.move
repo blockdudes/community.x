@@ -21,9 +21,17 @@ module myaddr::governance {
     const E_NOT_ENOUGH_UPVOTES: u64 = 3;
     const E_INSUFFICIENT_CONTRACT_BALANCE: u64 = 4;
 
+
+    struct Image  has store, drop, copy {
+        url: String,
+        alt: String,
+    }
+
     struct Proposal has store, drop, copy {
         proposal_id: String,
         message: String,
+        resource: String,
+        type: String,
         proposer: address,
         up_votes: u64,
         down_votes: u64,
@@ -31,34 +39,33 @@ module myaddr::governance {
         executed: bool
     }
 
-    struct ContractStore has key {
+
+     struct ContractStore has key {
+        owner: address,
         proposals: vector<Proposal>,
     }
 
-    fun init_module(admin: &signer) {
-        // Check if the ContractStore already exists at the contract address (@myaddr)
-        if (!exists<ContractStore>(@myaddr)) {
-            // If it doesn't exist, initialize it by moving the resource to the contract address
-            move_to(admin, ContractStore { proposals: vector::empty() });
+    fun init_module(owner: &signer) {
+        let owner_address = signer::address_of(owner);
+        if (!exists<ContractStore>(owner_address)) {
+            move_to(owner, ContractStore { owner: owner_address, proposals: vector::empty() });
         } else {
-            // The store already exists, so no need to initialize again
             return;
         }
     }
 
-    // Admin-only initialization entry function to initialize the module (called only once)
-    public entry fun admin_init_module(admin: &signer) { // Change to reference
-        assert!(signer::address_of(admin) == @myaddr, E_ONLY_ADMIN); // Only the contract address can initialize
-        // Call the internal module initialization
-        init_module(admin);
+    public entry fun admin_init_module(owner: &signer) {
+        init_module(owner);
     }
 
-    public entry fun create_proposal(admin: &signer, proposal_id: String, message: String) acquires ContractStore {
+    public entry fun create_proposal(admin: &signer, proposal_id: String, message: String, resource: String, type: String) acquires ContractStore {
         // Assuming proposals is a vector in ContractStore
         let store = borrow_global_mut<ContractStore>(signer::address_of(admin));
         vector::push_back(&mut store.proposals, Proposal {
             proposal_id,
             message,
+            resource,
+            type,
             proposer: signer::address_of(admin),
             up_votes: 0,
             down_votes: 0,
@@ -69,7 +76,7 @@ module myaddr::governance {
     }
 
     public entry fun vote_proposal(account: &signer, proposal_id: String, vote: bool) acquires ContractStore {
-        let store = borrow_global_mut<ContractStore>(@myaddr);
+        let store = borrow_global_mut<ContractStore>(signer::address_of(account));
         let index = find_proposal(&store.proposals, &proposal_id); // Ensure this function or logic is correct
         if (index == vector::length(&store.proposals)) {
             abort E_PROPOSAL_NOT_FOUND;
@@ -82,7 +89,6 @@ module myaddr::governance {
         };
     }
 
-    // Helper function to find a proposal by id
     fun find_proposal(proposals: &vector<Proposal>, proposal_id: &String): u64 {
         let len = vector::length(proposals);
         let i = 0;
@@ -96,10 +102,10 @@ module myaddr::governance {
     }
 
     #[view]
-    public fun get_proposals(): vector<Proposal> acquires ContractStore {
-            let store = borrow_global<ContractStore>(@myaddr);
-            store.proposals
-        }
+    public fun get_proposals(owner_address: address): vector<Proposal> acquires ContractStore {
+        let store = borrow_global<ContractStore>(owner_address);
+        store.proposals // Return the proposals vector
+    }
 
      #[test_only]
     fun setup(aptos: &signer, core_resources: &signer) {
@@ -142,6 +148,8 @@ module myaddr::governance {
         let proposal_id = string::utf8(b"test_proposal");
         let message = string::utf8(b"Test proposal message");
         let proposer = signer::address_of(&admin); // Correctly pass reference
+        let resource = string::utf8(b"Test resource");
+        let type = string::utf8(b"Test type");
 
         // coin::register<AptosCoin>(aptos_framework);
         // aptos_coin::mint(aptos_framework, proposer, 10000);
@@ -152,10 +160,10 @@ module myaddr::governance {
 
         account::create_account_for_test(signer::address_of(&voting_user));
 
-        create_proposal(&admin, proposal_id, message); // Pass admin directly
+        create_proposal(&admin, proposal_id, message, resource, type); // Pass admin directly
 
         // Get proposals and verify
-        let proposals = get_proposals();
+        let proposals = get_proposals(signer::address_of(&admin));
         debug::print(&proposals);
         
         assert!(vector::length(&proposals) == 1, 0);
@@ -172,12 +180,12 @@ module myaddr::governance {
         vote_proposal(&voting_user, proposal_id, true);
 
         // Get proposals again and verify the vote
-        let proposals_after_vote = get_proposals();
+        let proposals_after_vote = get_proposals(signer::address_of(&admin));
         let voted_proposal = vector::borrow(&proposals_after_vote, 0);
         assert!(voted_proposal.up_votes == 1, 8);
         assert!(voted_proposal.down_votes == 0, 9);
 
-        let proposals = get_proposals();
+        let proposals = get_proposals(signer::address_of(&admin));
         debug::print(&proposals);
 
     }

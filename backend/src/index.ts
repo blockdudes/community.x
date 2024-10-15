@@ -60,6 +60,7 @@ io.on("connection", (socket: Socket) => {
         try {
             const timestamp = Date.now();
             const createPost = await postModel.create({
+                post_id: data.post_id || null,
                 title: data.title,
                 description: data.description,
                 post: data.post,
